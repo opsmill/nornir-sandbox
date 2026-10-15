@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Containerlab working directory (created next to the topology file) and backups
+lab/clab-*/
+lab/.*.bak
+*.bak
+
+# Script output
+backups/
+nornir.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

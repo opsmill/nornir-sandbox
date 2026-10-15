@@ -1,0 +1,50 @@
+[project]
+name = "nornir-sandbox"
+version = "0.1.0"
+description = "Containerlab lab with three Arista cEOS devices and Nornir scripts to back up, run commands on, troubleshoot and validate it."
+readme = "README.md"
+authors = [{ name = "Damien Garros", email = "dgarros@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "cyclopts>=5.2.0",
+    "invoke>=2.2",
+    "nornir>=3.5",
+    "nornir-scrapli>=2025.1.30",
+    "nornir-utils>=0.2",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pyyaml>=6.0",
+    "ruff>=0.8",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nornir_sandbox"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "scripts", "tests", "tasks.py"]
+
+[[tool.mypy.overrides]]
+module = ["nornir_scrapli.*", "nornir_utils.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Each test creates a Nornir object, which configures logging again.
+filterwarnings = ["ignore::nornir.core.exceptions.ConflictingConfigurationWarning"]

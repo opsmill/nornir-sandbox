@@ -1,0 +1,28 @@
+# Nornir hosts for the lab in lab/sandbox.clab.yml.
+# hostname is the management address set by `mgmt-ipv4` in that file.
+# data.links lists the lab links seen from this host; scripts/validate uses it
+# to check interfaces and LLDP neighbors.
+---
+ceos1:
+  hostname: 172.24.100.11
+  groups: [ceos]
+  data:
+    links:
+      - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet1}
+      - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet2}
+
+ceos2:
+  hostname: 172.24.100.12
+  groups: [ceos]
+  data:
+    links:
+      - {interface: Ethernet1, peer: ceos1, peer_interface: Ethernet1}
+      - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet1}
+
+ceos3:
+  hostname: 172.24.100.13
+  groups: [ceos]
+  data:
+    links:
+      - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet2}
+      - {interface: Ethernet2, peer: ceos1, peer_interface: Ethernet2}

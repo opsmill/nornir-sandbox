@@ -1,0 +1,40 @@
+# Three Arista cEOS devices connected in a triangle.
+#
+#            ceos1
+#     eth1 /       \ eth2
+#   eth1  /         \  eth2
+#     ceos2 ------- ceos3
+#          eth2   eth1
+#
+# inventory/hosts.yaml describes the same nodes, management addresses and
+# links for Nornir. Change both files together; `invoke test` checks that
+# they match.
+name: sandbox
+
+mgmt:
+  network: sandbox-mgmt
+  ipv4-subnet: 172.24.100.0/24
+
+topology:
+  kinds:
+    ceos:
+      image: registry.opsmill.io/external/ceos-image:4.29.0.2F
+
+  nodes:
+    ceos1:
+      kind: ceos
+      mgmt-ipv4: 172.24.100.11
+      startup-config: configs/ceos1.cfg
+    ceos2:
+      kind: ceos
+      mgmt-ipv4: 172.24.100.12
+      startup-config: configs/ceos2.cfg
+    ceos3:
+      kind: ceos
+      mgmt-ipv4: 172.24.100.13
+      startup-config: configs/ceos3.cfg
+
+  links:
+    - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    - endpoints: ["ceos1:eth2", "ceos3:eth2"]
+    - endpoints: ["ceos2:eth2", "ceos3:eth1"]

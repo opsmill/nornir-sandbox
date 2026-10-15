@@ -1,0 +1,10 @@
+---
+ceos:
+  platform: arista_eos
+  connection_options:
+    scrapli:
+      extras:
+        # The devices get new SSH host keys on every deploy.
+        auth_strict_key: false
+        # Enable password; setting it stops scrapli from warning on every connection.
+        auth_secondary: admin
