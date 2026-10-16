@@ -6,14 +6,20 @@ import json
 from typing import Any
 
 from nornir.core.task import Task
+from scrapli import Cli
+
+
+class CommandError(Exception):
+    """EOS answered a command with one of the failure messages of the scrapli arista_eos definition."""
 
 
 def send(task: Task, command: str) -> str:
-    """Run one command and return its text output. Raises if EOS reports an error."""
-    conn = task.host.get_connection("scrapli", task.nornir.config)
-    response = conn.send_command(command)
-    response.raise_for_status()
-    return str(response.result)
+    """Run one command and return its text output. Raises CommandError if EOS reports an error."""
+    conn: Cli = task.host.get_connection("scrapli", task.nornir.config)
+    response = conn.send_input(command)
+    if response.failed:
+        raise CommandError(f"{command!r}: {response.result}")
+    return response.result
 
 
 def send_json(task: Task, command: str) -> dict[str, Any]:

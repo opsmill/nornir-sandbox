@@ -3,8 +3,15 @@ ceos:
   platform: arista_eos
   connection_options:
     scrapli:
+      # nornir_scrapli v2 takes scrapli v2 options, nested by section (auth, session,
+      # transport, cli). See
+      # https://scrapli.github.io/nornir_scrapli/user_guide/migrating_to_v2/
       extras:
-        # The devices get new SSH host keys on every deploy.
-        auth_strict_key: false
-        # Enable password; setting it stops scrapli from warning on every connection.
-        auth_secondary: admin
+        transport:
+          # The devices get new SSH host keys on every deploy. nornir_scrapli v2 checks
+          # host keys unless this is set to false.
+          enable_strict_key: false
+          # Use the default ssh configuration. Without this, nornir_scrapli passes
+          # Nornir's ssh.config_file (~/.ssh/config) to ssh, and the login fails when
+          # that file does not exist.
+          ssh_config_path: ""

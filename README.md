@@ -28,6 +28,8 @@ Login: `admin` / `admin`, SSH on the management address.
 - The cEOS image `registry.opsmill.io/external/ceos-image:4.29.0.2F`. To use
   another image, change `topology.kinds.ceos.image` in `lab/sandbox.clab.yml`.
 - [uv](https://docs.astral.sh/uv/).
+- Linux (x86_64 or aarch64) or macOS on Apple silicon. The scripts use scrapli v2,
+  which has no packages for Windows or Intel macOS.
 - About 3 GB of free memory for the three devices.
 
 ## Start and stop the lab
@@ -98,7 +100,7 @@ Nornir also writes a log to `nornir.log`.
 ```text
 inventory/                  Nornir inventory (SimpleInventory)
   hosts.yaml                devices: management address, group, expected links
-  groups.yaml               platform and scrapli connection options
+  groups.yaml               platform and scrapli v2 connection options
   defaults.yaml             username and password
 lab/
   sandbox.clab.yml          containerlab topology
@@ -130,9 +132,12 @@ the host names, management addresses or links in the two files do not match.
   types from `nornir_sandbox.cli`, `init_nornir(hosts=...)`, `nr.run(...)`, and
   `print_summary(...)` for the output and exit code.
 - A new Nornir task: add it to `src/nornir_sandbox/tasks/`. Use `send()` or
-  `send_json()` from `tasks/eos.py` to run commands on EOS. Put logic that does
-  not need a device in a plain function, as in `checks.py`, so it can be unit
-  tested.
+  `send_json()` from `tasks/eos.py` to run commands on EOS. To call the
+  `nornir_scrapli` tasks directly, use their scrapli v2 arguments, for example
+  `requested_mode` instead of `privilege_level`; see the
+  [migration guide](https://scrapli.github.io/nornir_scrapli/user_guide/migrating_to_v2/).
+  Put logic that does not need a device in a plain function, as in `checks.py`,
+  so it can be unit tested.
 - A new Nornir plugin: add it to the package, for example under
   `src/nornir_sandbox/plugins/`, and register it in `pyproject.toml` under
   `[project.entry-points."nornir.plugins.<type>"]`. Run `uv sync` after
@@ -147,3 +152,11 @@ the host names, management addresses or links in the two files do not match.
   `invoke restart`.
 - The devices see each other as LLDP neighbors on `Management0` because they
   share the management network. The LLDP check ignores management interfaces.
+- The scripts use scrapli v2 through `nornir-scrapli`, installed from pull
+  request [scrapli/nornir_scrapli#176](https://github.com/scrapli/nornir_scrapli/pull/176)
+  (pinned commit in `pyproject.toml` under `[tool.uv.sources]`) until a release
+  supports scrapli v2.
+- Devices started before `aaa authorization exec default local` was added to
+  `lab/configs/` log `admin` in at `ceosN>`. scrapli then sends `enable` on each
+  connection and prints a warning. Run `invoke restart` to load the current
+  startup configurations.
