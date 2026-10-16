@@ -34,5 +34,11 @@ uv run invoke test
   `nornir_sandbox.cli`, and return 1 when a task fails.
 - Device access goes through the scrapli connection (`tasks/eos.py`). Parse EOS
   output with `| json`, not text parsing.
+- The project uses scrapli v2 and `nornir-scrapli` from
+  https://github.com/scrapli/nornir_scrapli/pull/176 (pinned in `pyproject.toml`
+  under `[tool.uv.sources]`). Use the v2 API: `Cli.send_input()`, nested
+  connection `extras` (`auth`, `session`, `transport`, `cli`), and v2 task
+  arguments such as `requested_mode`. Results have `failed` but no
+  `raise_for_status()`.
 - Logic that does not need a device goes in plain functions with unit tests
   (`checks.py`).
