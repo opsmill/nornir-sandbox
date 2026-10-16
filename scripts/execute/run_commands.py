@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from cyclopts import App
-from nornir_scrapli.tasks import send_commands
+from nornir_scrapli.async_tasks import send_commands
 from nornir_utils.plugins.functions import print_result
 
 from nornir_sandbox import init_nornir
@@ -11,7 +11,7 @@ app = App()
 
 
 @app.default
-def main(commands: list[str], /, *, hosts: Hosts = None) -> int:
+async def main(commands: list[str], /, *, hosts: Hosts = None) -> int:
     """Run show commands on the lab devices and print the output.
 
     Example: run_commands.py "show version" "show lldp neighbors" --hosts ceos1
@@ -21,7 +21,8 @@ def main(commands: list[str], /, *, hosts: Hosts = None) -> int:
     commands
         Commands to run, in order.
     """
-    result = init_nornir(hosts=hosts).run(task=send_commands, commands=commands)
+    async with init_nornir(hosts=hosts) as nr:
+        result = await nr.arun(task=send_commands, commands=commands)
     print_result(result)
     return int(result.failed)
 

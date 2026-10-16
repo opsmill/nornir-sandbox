@@ -17,7 +17,7 @@ app = App()
 
 
 @app.default
-def main(
+async def main(
     *,
     hosts: Hosts = None,
     check: Annotated[list[Literal["interfaces", "lldp"]] | None, Parameter(negative=())] = None,
@@ -34,9 +34,9 @@ def main(
         interfaces: every link interface has line protocol up.
         lldp: LLDP neighbors match the links, with no extra neighbors.
     """
-    nr = init_nornir(hosts=hosts)
-    # on_failed=True: a host that fails one check still runs the others.
-    results = [nr.run(task=CHECKS[name], on_failed=True) for name in check or CHECKS]
+    async with init_nornir(hosts=hosts) as nr:
+        # on_failed=True: a host that fails one check still runs the others.
+        results = [await nr.arun(task=CHECKS[name], on_failed=True) for name in check or CHECKS]
     return print_summary(results, verbose=verbose)
 
 

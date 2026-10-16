@@ -27,7 +27,9 @@ Login: `admin` / `admin`, SSH on the management address.
   set `CONTAINERLAB="sudo containerlab"`.
 - The cEOS image `registry.opsmill.io/external/ceos-image:4.29.0.2F`. To use
   another image, change `topology.kinds.ceos.image` in `lab/sandbox.clab.yml`.
-- [uv](https://docs.astral.sh/uv/).
+- [uv](https://docs.astral.sh/uv/). `uv sync` installs Nornir and nornir-scrapli
+  from Git commits, so it needs access to github.com (see
+  [Unreleased Nornir and nornir-scrapli](#unreleased-nornir-and-nornir-scrapli)).
 - About 3 GB of free memory for the three devices.
 
 ## Start and stop the lab
@@ -76,6 +78,7 @@ The invoke tasks call these scripts. You can also run them directly with
 `uv run python scripts/<type>/<script>.py --help`. The scripts are
 [cyclopts](https://github.com/BrianPugh/cyclopts) apps: the options come from
 the parameters of the `main()` function and their help from its docstring.
+`main()` is a coroutine; cyclopts runs it on an asyncio event loop.
 Every script that connects to devices takes `--hosts` (repeat it for several
 hosts, for example `--hosts ceos1 --hosts ceos2`) and exits with 1 when a task
 fails. Most also take `--verbose`, which prints the traceback of failed tasks.
@@ -106,8 +109,8 @@ lab/
 scripts/                    command-line scripts, one directory per type
   backup/ execute/ troubleshoot/ validate/
 src/nornir_sandbox/         shared Python package
-  core.py                   init_nornir(): Nornir object for the lab, with a host filter
-  tasks/                    Nornir tasks (backup, access check, validation, EOS helpers)
+  core.py                   init_nornir(): Nornir object for the lab (asyncio runner), with a host filter
+  tasks/                    Nornir coroutine tasks (backup, access check, validation, EOS helpers)
   checks.py                 compares device output with the expected links; no device access
   cli.py                    --hosts and --verbose options and result summary shared by the scripts
 tests/                      unit tests; they do not need the lab
@@ -122,21 +125,58 @@ and LLDP neighbors on the device.
 you add a device or a link, change both files. `uv run invoke test` fails when
 the host names, management addresses or links in the two files do not match.
 
+## Asyncio runner and connections
+
+The scripts use Nornir's `asyncio` runner and the asyncio `scrapli`
+connection. Each task is a coroutine, and all hosts run on one event loop in
+the script's process, with no threads. Up to 10 hosts run a task at the same
+time (`num_workers` of `init_nornir()`).
+
+- Run tasks with `await nr.arun(task=...)`. `nr.run()` raises
+  `AsyncTaskOnSyncRunError` for a coroutine task, and `nr.arun()` raises
+  `SyncTaskOnAsyncRunError` for a plain function.
+- Inside a task, get the connection with
+  `await task.host.aget_connection("scrapli", task.nornir.config)` and await
+  its methods, for example `await conn.send_command(...)`. Without a
+  `transport` in the inventory, the asyncio connection uses `asyncssh`.
+- The tasks from nornir-scrapli are in `nornir_scrapli.async_tasks`, for
+  example `send_commands`. The ones in `nornir_scrapli.tasks` are synchronous
+  and fail with the asyncio runner.
+- Open the Nornir object with `async with init_nornir(...) as nr:`. On exit, it
+  closes the connections of every host, failed hosts included, before the
+  event loop stops.
+- Code that blocks, such as file writes or `time.sleep()`, stops every host
+  while it runs. Use `await asyncio.to_thread(...)` or `await asyncio.sleep()`,
+  as in `tasks/backup.py` and `scripts/troubleshoot/check_access.py`.
+
+### Unreleased Nornir and nornir-scrapli
+
+The asyncio runner
+([nornir-automation/nornir#1111](https://github.com/nornir-automation/nornir/pull/1111))
+and the asyncio scrapli connection and tasks
+([scrapli/nornir_scrapli#179](https://github.com/scrapli/nornir_scrapli/pull/179))
+are not released. `pyproject.toml` installs both from Git commits under
+`[tool.uv.sources]`. nornir-scrapli requires the same Nornir commit, so when
+you move to newer commits, change both `rev` values together and run
+`uv lock`.
+
 ## Add your own code
 
 - A new script: add a file under the matching `scripts/<type>/` directory (or a
   new type directory). Start from `scripts/validate/validate_lab.py`: a
-  cyclopts `App`, a `main()` function using the `Hosts` and `Verbose` option
-  types from `nornir_sandbox.cli`, `init_nornir(hosts=...)`, `nr.run(...)`, and
+  cyclopts `App`, an `async def main()` function using the `Hosts` and
+  `Verbose` option types from `nornir_sandbox.cli`,
+  `async with init_nornir(hosts=...) as nr:`, `await nr.arun(...)`, and
   `print_summary(...)` for the output and exit code.
-- A new Nornir task: add it to `src/nornir_sandbox/tasks/`. Use `send()` or
-  `send_json()` from `tasks/eos.py` to run commands on EOS. Put logic that does
-  not need a device in a plain function, as in `checks.py`, so it can be unit
-  tested.
+- A new Nornir task: add it as an `async def` function to
+  `src/nornir_sandbox/tasks/`. Use `await send()` or `await send_json()` from
+  `tasks/eos.py` to run commands on EOS. Put logic that does not need a device
+  in a plain function, as in `checks.py`, so it can be unit tested.
 - A new Nornir plugin: add it to the package, for example under
   `src/nornir_sandbox/plugins/`, and register it in `pyproject.toml` under
-  `[project.entry-points."nornir.plugins.<type>"]`. Run `uv sync` after
-  changing entry points.
+  `[project.entry-points."nornir.plugins.<type>"]`. Connection plugins that
+  support asyncio go under `nornir.plugins.capability_connections`. Run
+  `uv sync` after changing entry points.
 - A shortcut: add an `@task` to `tasks.py`.
 
 ## Known behaviors

@@ -29,10 +29,17 @@ uv run invoke test
 
 ## Conventions
 
-- Scripts are a cyclopts `App` with one `@app.default` `main()` function. Use
-  the `Hosts` and `Verbose` types and `print_summary()` from
-  `nornir_sandbox.cli`, and return 1 when a task fails.
-- Device access goes through the scrapli connection (`tasks/eos.py`). Parse EOS
-  output with `| json`, not text parsing.
+- Scripts are a cyclopts `App` with one `@app.default` `async def main()`
+  function. Use the `Hosts` and `Verbose` types and `print_summary()` from
+  `nornir_sandbox.cli`, open Nornir with `async with init_nornir(...) as nr:`,
+  run tasks with `await nr.arun(...)`, and return 1 when a task fails.
+- Nornir uses the `asyncio` runner. Tasks are `async def` coroutines; use
+  `nornir_scrapli.async_tasks`, not `nornir_scrapli.tasks`. Do not call blocking
+  code (file I/O, `time.sleep`, sockets) in a task; use `asyncio.to_thread()` or
+  the asyncio equivalent.
+- Device access goes through the asyncio scrapli connection (`tasks/eos.py`).
+  Parse EOS output with `| json`, not text parsing.
+- nornir and nornir-scrapli come from unreleased Git commits pinned in
+  `[tool.uv.sources]` in `pyproject.toml`; update both `rev` values together.
 - Logic that does not need a device goes in plain functions with unit tests
   (`checks.py`).

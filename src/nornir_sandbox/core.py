@@ -18,12 +18,16 @@ def init_nornir(
 ) -> Nornir:
     """Return a Nornir object for the lab, optionally limited to some host names.
 
+    The object uses Nornir's asyncio runner: run coroutine tasks with
+    `await nr.arun(...)` and close the connections with `async with nr:`.
+    `num_workers` is the number of hosts that run a task at the same time.
+
     The inventory is read from hosts.yaml, groups.yaml and defaults.yaml in
     `inventory_dir`. Raises ValueError when a requested host is not in the
     inventory, so a typo does not silently run against nothing.
     """
     nr = InitNornir(
-        runner={"plugin": "threaded", "options": {"num_workers": num_workers}},
+        runner={"plugin": "asyncio", "options": {"num_workers": num_workers}},
         inventory={
             "plugin": "SimpleInventory",
             "options": {

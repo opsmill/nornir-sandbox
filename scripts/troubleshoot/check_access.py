@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 
 from cyclopts import App
@@ -12,7 +13,7 @@ app = App()
 
 
 @app.default
-def main(*, hosts: Hosts = None, wait: int = 0, interval: int = 10, verbose: Verbose = False) -> int:
+async def main(*, hosts: Hosts = None, wait: int = 0, interval: int = 10, verbose: Verbose = False) -> int:
     """Check that each lab device answers on SSH, accepts the login and runs commands.
 
     cEOS accepts SSH logins about 30 seconds after `containerlab deploy`.
@@ -24,20 +25,20 @@ def main(*, hosts: Hosts = None, wait: int = 0, interval: int = 10, verbose: Ver
     interval
         Seconds between retries.
     """
-    nr = init_nornir(hosts=hosts)
-    deadline = time.monotonic() + wait
-    pending = set(nr.inventory.hosts)
-    passed = {}
+    async with init_nornir(hosts=hosts) as nr:
+        deadline = time.monotonic() + wait
+        pending = set(nr.inventory.hosts)
+        passed = {}
 
-    while True:
-        targets = nr.filter(filter_func=lambda host, names=frozenset(pending): host.name in names)
-        result = targets.run(task=check_access, on_failed=True)
-        passed.update({host: multi for host, multi in result.items() if not multi.failed})
-        pending = {host for host, multi in result.items() if multi.failed}
-        if not pending or time.monotonic() >= deadline:
-            break
-        print(f"waiting for {', '.join(sorted(pending))} ({int(deadline - time.monotonic())}s left)", flush=True)
-        time.sleep(interval)
+        while True:
+            targets = nr.filter(filter_func=lambda host, names=frozenset(pending): host.name in names)
+            result = await targets.arun(task=check_access, on_failed=True)
+            passed.update({host: multi for host, multi in result.items() if not multi.failed})
+            pending = {host for host, multi in result.items() if multi.failed}
+            if not pending or time.monotonic() >= deadline:
+                break
+            print(f"waiting for {', '.join(sorted(pending))} ({int(deadline - time.monotonic())}s left)", flush=True)
+            await asyncio.sleep(interval)
 
     # Hosts that passed in an earlier round are reported with their passing result.
     result.update(passed)
