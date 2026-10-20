@@ -11,8 +11,10 @@ import re
 
 import pytest
 import yaml
+from nornir.core.run import RunOptions
 
 from nornir_sandbox import init_nornir, init_nornir_sync
+from nornir_sandbox.core import RunnerName
 from nornir_sandbox.paths import REPO_ROOT
 
 TOPOLOGY_FILE = REPO_ROOT / "lab" / "sandbox.clab.yml"
@@ -68,3 +70,10 @@ def test_sync_and_async_init_give_the_same_hosts_and_runner() -> None:
 def test_sync_init_rejects_unknown_names() -> None:
     with pytest.raises(ValueError, match="ceos9"):
         init_nornir_sync(hosts=["ceos9"])
+
+
+@pytest.mark.parametrize(("runner", "expected"), [("threaded", "ThreadedRunner"), ("serial", "SerialRunner")])
+def test_sync_init_selects_the_runner_and_its_deadlines(runner: RunnerName, expected: str) -> None:
+    nr = init_nornir_sync(runner=runner, per_host_timeout=4, timeout=9)
+    assert type(nr.runner).__name__ == expected
+    assert getattr(nr.runner, "run_options", None) == RunOptions(per_host_timeout=4, timeout=9)

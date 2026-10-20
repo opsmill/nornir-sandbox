@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nornir_sandbox.checks import Link, compare_interfaces, compare_lldp
+from nornir_sandbox.checks import Link, compare_interfaces, compare_lldp, summarize_fact
 
 EXPECTED = [Link("Ethernet1", "ceos2", "Ethernet1"), Link("Ethernet2", "ceos3", "Ethernet2")]
 
@@ -42,3 +42,13 @@ def test_interfaces_report_down_and_missing() -> None:
         "Ethernet2: line protocol is down (interface status disabled)",
         "Ethernet3: not present on the device",
     ]
+
+
+def test_summaries() -> None:
+    interfaces = {
+        "interfaces": {"Ethernet1": {"lineProtocolStatus": "up"}, "Ethernet2": {"lineProtocolStatus": "down"}},
+    }
+
+    assert summarize_fact("show version", {"version": "4.28.9M"}) == "EOS 4.28.9M"
+    assert summarize_fact("show interfaces", interfaces) == "1/2 interfaces up"
+    assert summarize_fact("show lldp neighbors", {"lldpNeighbors": [{}, {}]}) == "2 LLDP neighbors"

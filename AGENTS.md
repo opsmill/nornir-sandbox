@@ -11,9 +11,11 @@ them, and the shared `nornir_sandbox` package. See README.md for details.
   configurations (`configs/`). Keep it in sync with `inventory/hosts.yaml`;
   `tests/test_inventory.py` checks that they match.
 - `scripts/<type>/`: cyclopts command-line scripts grouped by type (backup,
-  execute, troubleshoot, validate).
-- `src/nornir_sandbox/`: shared code: `init_nornir()`, Nornir tasks, pure
-  comparison functions, shared cyclopts option types.
+  execute, troubleshoot, validate, runner). `scripts/runner/` holds sync and
+  async examples of run streaming, cancellation and deadlines.
+- `src/nornir_sandbox/`: shared code: `init_nornir()`, `init_nornir_sync()`,
+  EOS command helpers (`eos.py`), pure functions on device output
+  (`checks.py`), shared cyclopts option types.
 - `tests/`: unit tests; they do not need the lab.
 
 ## Commands
@@ -38,7 +40,14 @@ uv run invoke test
   `nornir_scrapli.async_tasks`, not `nornir_scrapli.tasks`. Do not call blocking
   code (file I/O, `time.sleep`, sockets) in a task; use `asyncio.to_thread()` or
   the asyncio equivalent.
-- Device access goes through the asyncio scrapli connection (`tasks/eos.py`).
+- Exception: the `scripts/runner/*_sync.py` scripts show the threaded and serial
+  runners. They have a plain `def main()`, open Nornir with
+  `with init_nornir_sync(runner=...) as nr:`, and run `def` tasks that use
+  `send_sync()`/`send_json_sync()`. Keep each runner example as a sync/async
+  pair.
+- A Nornir task lives in the script that uses it, above `main()`. Move it to
+  the package only when several scripts use it.
+- Device access goes through the scrapli connection (`eos.py`).
   Parse EOS output with `| json`, not text parsing.
 - nornir (3.7.0a1) and nornir-scrapli (1.6.0a1) are PyPI pre-releases pinned
   with `==` in `pyproject.toml`; update both versions together.

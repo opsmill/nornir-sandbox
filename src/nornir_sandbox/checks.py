@@ -1,8 +1,9 @@
-"""Compare device state with the links declared in the Nornir inventory.
+"""Pure functions on parsed EOS output: compare it with the links declared in the
+Nornir inventory, and summarize it.
 
 These functions take already-parsed device output, so they can be tested
-without a running lab. Each returns a list of problems; an empty list means
-the check passed.
+without a running lab. The compare_* functions return a list of problems; an
+empty list means the check passed.
 """
 
 from __future__ import annotations
@@ -76,3 +77,18 @@ def compare_interfaces(expected: Iterable[str], interfaces: Mapping[str, Mapping
             status = state.get("interfaceStatus")
             problems.append(f"{name}: line protocol is {protocol} (interface status {status})")
     return problems
+
+
+def summarize_fact(command: str, data: Mapping[str, Any]) -> str:
+    """Return a one-line summary of the `| json` output of `show version`, `show interfaces`
+    or `show lldp neighbors`. The runner examples in scripts/runner/ report it as progress.
+    """
+    if command == "show version":
+        return f"EOS {data['version']}"
+    if command == "show interfaces":
+        interfaces = data["interfaces"].values()
+        up = sum(1 for interface in interfaces if interface.get("lineProtocolStatus") == "up")
+        return f"{up}/{len(interfaces)} interfaces up"
+    if command == "show lldp neighbors":
+        return f"{len(data['lldpNeighbors'])} LLDP neighbors"
+    raise ValueError(f"no summary for {command!r}")
