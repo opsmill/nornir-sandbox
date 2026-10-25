@@ -15,6 +15,7 @@ from nornir.core.exceptions import TaskInterruptedError
 from nornir.core.task import AggregatedResult, PartialResult, Result
 
 from nornir_sandbox.core import init_nornir_sync
+from nornir_sandbox.eos import PLATFORM as EOS_PLATFORM
 
 
 def _known_hosts(type_: Any, value: list[str] | None) -> None:
@@ -33,6 +34,22 @@ Hosts = Annotated[
         help="Host to work on; repeat the option for several hosts. Default: every host.",
         negative=(),
         validator=_known_hosts,
+    ),
+]
+
+
+def _eos_hosts(type_: Any, value: list[str] | None) -> None:
+    """Reject host names that are not cEOS hosts, for the scripts that send EOS commands."""
+    if value:
+        init_nornir_sync(hosts=value, platform=EOS_PLATFORM)
+
+
+EosHosts = Annotated[
+    list[str] | None,
+    Parameter(
+        help="cEOS host to work on; repeat the option for several hosts. Default: every cEOS host.",
+        negative=(),
+        validator=_eos_hosts,
     ),
 ]
 Verbose = Annotated[bool, Parameter(help="Print the traceback of failed tasks.", negative=())]
