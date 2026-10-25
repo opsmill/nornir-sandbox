@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from nornir_sandbox.checks import Link, compare_interfaces, compare_lldp, summarize_fact
+from nornir_sandbox.checks import (
+    Link,
+    LldpNeighbor,
+    compare_interfaces,
+    compare_lldp,
+    compare_neighbors,
+    link_descriptions,
+    links_from,
+    summarize_fact,
+)
 
 EXPECTED = [Link("Ethernet1", "ceos2", "Ethernet1"), Link("Ethernet2", "ceos3", "Ethernet2")]
 
@@ -52,3 +61,20 @@ def test_summaries() -> None:
     assert summarize_fact("show version", {"version": "4.28.9M"}) == "EOS 4.28.9M"
     assert summarize_fact("show interfaces", interfaces) == "1/2 interfaces up"
     assert summarize_fact("show lldp neighbors", {"lldpNeighbors": [{}, {}]}) == "2 LLDP neighbors"
+
+
+def test_neighbors_ignore_the_sr_linux_management_interface() -> None:
+    expected = [Link("ethernet-1/1", "ceos1", "Ethernet3")]
+    neighbors = [
+        LldpNeighbor("ethernet-1/1", "ceos1", "Ethernet3"),
+        LldpNeighbor("mgmt0", "ceos2", "Management0"),
+    ]
+
+    assert compare_neighbors(expected, neighbors) == []
+
+
+def test_link_descriptions_from_inventory_links() -> None:
+    links = links_from([{"interface": "Ethernet3", "peer": "srl1", "peer_interface": "ethernet-1/1"}])
+
+    assert link_descriptions(links) == {"Ethernet3": "to srl1 ethernet-1/1"}
+    assert link_descriptions(links, "{interface} -> {peer}") == {"Ethernet3": "Ethernet3 -> srl1"}

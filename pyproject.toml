@@ -1,16 +1,56 @@
 [project]
 name = "nornir-sandbox"
 version = "0.1.0"
-description = "Containerlab lab with three Arista cEOS devices and Nornir scripts to back up, run commands on, troubleshoot and validate it."
+description = "Containerlab lab with three Arista cEOS devices and one Nokia SR Linux device, and Nornir scripts to back up, run commands on, troubleshoot and validate it."
 readme = "README.md"
 authors = [{ name = "Damien Garros", email = "dgarros@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = [
     "cyclopts>=5.2.0",
     "invoke>=2.2",
-    "nornir==3.7.0a1",
+    "nornir",
     "nornir-scrapli[asyncio]==1.6.0a1",
     "nornir-utils>=0.2",
+]
+
+# Operations and their tasks, read by Nornir the first time a script runs an Operation.
+# Task names are <operation>.<platform>.<connection>: `scrapli` holds the async task and
+# `scrapli_sync` the sync task (see src/nornir_sandbox/operations/__init__.py).
+[project.entry-points."nornir.plugins.operations"]
+get_facts = "nornir_sandbox.operations.contracts:GetFacts"
+get_config = "nornir_sandbox.operations.contracts:GetConfig"
+get_lldp_neighbors = "nornir_sandbox.operations.contracts:GetLldpNeighbors"
+set_interface_descriptions = "nornir_sandbox.operations.contracts:SetInterfaceDescriptions"
+
+[project.entry-points."nornir.plugins.operation_tasks"]
+"get_facts.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_facts"
+"get_facts.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_facts_sync"
+"get_facts.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_facts"
+"get_facts.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_facts_sync"
+"get_config.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_config"
+"get_config.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_config_sync"
+"get_config.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_config"
+"get_config.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_config_sync"
+"get_lldp_neighbors.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_lldp_neighbors"
+"get_lldp_neighbors.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_lldp_neighbors_sync"
+"get_lldp_neighbors.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_lldp_neighbors"
+"get_lldp_neighbors.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_lldp_neighbors_sync"
+"set_interface_descriptions.arista_eos.scrapli" = "nornir_sandbox.operations.eos:set_interface_descriptions"
+"set_interface_descriptions.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:set_interface_descriptions_sync"
+"set_interface_descriptions.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:set_interface_descriptions"
+"set_interface_descriptions.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:set_interface_descriptions_sync"
+
+# Operations (nornir-automation/nornir#1115, branch dga/feat-operation-s0e5v) are not
+# released yet, so nornir comes from a Git commit of that branch, which is Nornir
+# 3.7.0a1 plus Operations. That commit reports version 3.6.1, below the nornir>=3.7.0a1
+# that nornir-scrapli 1.6.0a1 requires, so override-dependencies below replaces that
+# requirement with the same commit. Change both nornir revisions together.
+[tool.uv.sources]
+nornir = { git = "https://github.com/nornir-automation/nornir", rev = "0a17a4f62cff4e9485f5be5ef77e92b662ccf078" }
+
+[tool.uv]
+override-dependencies = [
+    "nornir @ git+https://github.com/nornir-automation/nornir@0a17a4f62cff4e9485f5be5ef77e92b662ccf078",
 ]
 
 [dependency-groups]

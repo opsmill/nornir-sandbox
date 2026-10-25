@@ -7,8 +7,8 @@ from nornir.core.task import Result, Task
 
 from nornir_sandbox import close_failed_connections, init_nornir
 from nornir_sandbox.checks import Link, compare_interfaces, compare_lldp
-from nornir_sandbox.cli import Hosts, Verbose, print_summary
-from nornir_sandbox.eos import send_json
+from nornir_sandbox.cli import EosHosts, Verbose, print_summary
+from nornir_sandbox.eos import PLATFORM, send_json
 
 
 def _links(task: Task) -> list[Link]:
@@ -46,7 +46,7 @@ app = App()
 @app.default
 async def main(
     *,
-    hosts: Hosts = None,
+    hosts: EosHosts = None,
     check: Annotated[list[Literal["interfaces", "lldp"]] | None, Parameter(negative=())] = None,
     verbose: Verbose = False,
 ) -> int:
@@ -61,7 +61,7 @@ async def main(
         interfaces: every link interface has line protocol up.
         lldp: LLDP neighbors match the links, with no extra neighbors.
     """
-    nr = await init_nornir(hosts=hosts)
+    nr = await init_nornir(hosts=hosts, platform=PLATFORM)
     async with nr:
         # on_failed=True: a host that fails one check still runs the others.
         results = []
