@@ -1,5 +1,6 @@
-"""pyproject.toml registers every Operation of the sandbox with a sync and an async task
-for each lab platform, and init_nornir() and init_nornir_sync() select the connection name of the runner."""
+"""pyproject.toml registers a sync and an async task for each lab platform for every
+Operation of the sandbox except get_config, whose tasks the backup scripts register in
+code. init_nornir() and init_nornir_sync() select the connection name of the runner."""
 
 from __future__ import annotations
 
@@ -10,9 +11,9 @@ from nornir.core.operations import OperationRegistry
 from nornir.core.run import RunStream
 
 from nornir_sandbox import init_nornir, init_nornir_sync
-from nornir_sandbox.operations import ASYNC_CONNECTION, SYNC_CONNECTION, Facts, GetFacts
+from nornir_sandbox.operations import ASYNC_CONNECTION, SYNC_CONNECTION, Facts, GetConfig, GetFacts, eos
 
-OPERATIONS = {"get_config", "get_facts", "get_interfaces", "get_lldp_neighbors", "set_interface_descriptions"}
+OPERATIONS = {"get_facts", "get_interfaces", "get_lldp_neighbors", "set_interface_descriptions"}
 PLATFORMS = {"arista_eos", "nokia_srlinux"}
 
 
@@ -29,6 +30,22 @@ def test_entry_points_register_a_sync_and_an_async_task_per_platform() -> None:
             for connection, kind in ((ASYNC_CONNECTION, "async"), (SYNC_CONNECTION, "sync"))
         }
         assert all(r.source.distribution == "nornir-sandbox" for r in info.implementations)
+
+
+def test_get_config_tasks_are_registered_in_code() -> None:
+    info = next(info for info in OperationRegistry.operations() if info.name == GetConfig.name)
+    assert info.operation is GetConfig
+    assert all(r.source.kind == "call" for r in info.implementations)
+
+    try:
+        registration = OperationRegistry.register(
+            operation=GetConfig.name, platform="arista_eos", connection=ASYNC_CONNECTION, task=eos.get_config
+        )
+        assert OperationRegistry.get(GetConfig.name, "arista_eos", ASYNC_CONNECTION) is registration
+        assert registration.kind == "async"
+        assert registration.source.kind == "call"
+    finally:
+        OperationRegistry.deregister(operation=GetConfig.name, platform="arista_eos", connection=ASYNC_CONNECTION)
 
 
 def test_init_nornir_selects_the_operation_connection_of_the_runner() -> None:

@@ -66,7 +66,9 @@ uv run invoke test
   `<operation>.<platform>.scrapli` (async) and `<operation>.<platform>.scrapli_sync`
   (sync). A registration key holds one task, hence the two connection names;
   `init_nornir()` and `init_nornir_sync()` set `core.operation_connection` for
-  the runner. Run `uv sync` after changing entry points. Keep each
+  the runner. Run `uv sync` after changing entry points. Exception:
+  `get_config` has no task entry points; `scripts/operations/backup_configs_*.py`
+  register its tasks with `OperationRegistry.register()`. Keep each
   `scripts/operations/` example as a sync/async pair.
 - `lab/sandbox.clab.yml`, `lab/configs/`, `inventory/hosts.yaml` and
   `inventory/groups.yaml` describe srl1 too; SR Linux interface names are
