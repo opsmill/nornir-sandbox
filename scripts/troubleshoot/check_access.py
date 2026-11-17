@@ -5,7 +5,7 @@ import time
 
 from cyclopts import App
 
-from nornir_sandbox import init_nornir
+from nornir_sandbox import close_failed_connections, init_nornir
 from nornir_sandbox.cli import Hosts, Verbose, print_summary
 from nornir_sandbox.tasks import check_access
 
@@ -25,7 +25,8 @@ async def main(*, hosts: Hosts = None, wait: int = 0, interval: int = 10, verbos
     interval
         Seconds between retries.
     """
-    async with init_nornir(hosts=hosts) as nr:
+    nr = await init_nornir(hosts=hosts)
+    async with nr:
         deadline = time.monotonic() + wait
         pending = set(nr.inventory.hosts)
         passed = {}
@@ -37,6 +38,7 @@ async def main(*, hosts: Hosts = None, wait: int = 0, interval: int = 10, verbos
             pending = {host for host, multi in result.items() if multi.failed}
             if not pending or time.monotonic() >= deadline:
                 break
+            await close_failed_connections(nr, result)
             print(f"waiting for {', '.join(sorted(pending))} ({int(deadline - time.monotonic())}s left)", flush=True)
             await asyncio.sleep(interval)
 

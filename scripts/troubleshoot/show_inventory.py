@@ -9,9 +9,10 @@ app = App()
 
 
 @app.default
-def main(*, hosts: Hosts = None) -> None:
+async def main(*, hosts: Hosts = None) -> None:
     """Print the Nornir inventory from inventory/, without connecting to any device."""
-    for name, host in sorted(init_nornir(hosts=hosts).inventory.hosts.items()):
+    nr = await init_nornir(hosts=hosts)
+    for name, host in sorted(nr.inventory.hosts.items()):
         print(name)
         print(f"  hostname: {host.hostname}")
         print(f"  platform: {host.platform}")

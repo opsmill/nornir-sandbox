@@ -8,17 +8,10 @@ requires-python = ">=3.11"
 dependencies = [
     "cyclopts>=5.2.0",
     "invoke>=2.2",
-    "nornir",
-    "nornir-scrapli[asyncio]",
+    "nornir==3.7.0a1",
+    "nornir-scrapli[asyncio]==1.6.0a1",
     "nornir-utils>=0.2",
 ]
-
-# The asyncio runner (nornir-automation/nornir#1111) and the async scrapli connection
-# and tasks (scrapli/nornir_scrapli#179) are not released yet. nornir-scrapli pins nornir
-# to the same commit, so update both revisions together.
-[tool.uv.sources]
-nornir = { git = "https://github.com/nornir-automation/nornir", rev = "01bac1d326092489d688a72cd9d19569c6e1688a" }
-nornir-scrapli = { git = "https://github.com/scrapli/nornir_scrapli", rev = "5ea33b7de9fa4fb035c76b2032bcd1e0d7660825" }
 
 [dependency-groups]
 dev = [

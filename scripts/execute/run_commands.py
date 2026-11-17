@@ -21,7 +21,8 @@ async def main(commands: list[str], /, *, hosts: Hosts = None) -> int:
     commands
         Commands to run, in order.
     """
-    async with init_nornir(hosts=hosts) as nr:
+    nr = await init_nornir(hosts=hosts)
+    async with nr:
         result = await nr.arun(task=send_commands, commands=commands)
     print_result(result)
     return int(result.failed)

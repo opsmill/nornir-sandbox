@@ -650,10 +650,14 @@ wheels = [
 
 [[package]]
 name = "nornir"
-version = "3.6.0"
-source = { git = "https://github.com/nornir-automation/nornir?rev=01bac1d326092489d688a72cd9d19569c6e1688a#01bac1d326092489d688a72cd9d19569c6e1688a" }
+version = "3.7.0a1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f9/fa/c21bce221e979d28502c3a932c453d83967b604ba35b6cd117c0997ea8e2/nornir-3.7.0a1.tar.gz", hash = "sha256:4035895ff916dff3dcbbf9395cac8c23f165483760ce18a9641ddf1f28a05df1", size = 61997, upload-time = "2026-11-15T11:58:51.614Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/e2/7a552c6b07cb9c5af71084f3e70fc71c9c30537b12afc9c8d8f3b3e83839/nornir-3.7.0a1-py3-none-any.whl", hash = "sha256:79ad228b2e74a16ee0a467ceacbb228a2305fe6aa813aecd6aad6cb927f86ce4", size = 66145, upload-time = "2026-11-15T11:58:50.611Z" },
 ]
 
 [[package]]
@@ -681,8 +685,8 @@ dev = [
 requires-dist = [
     { name = "cyclopts", specifier = ">=5.2.0" },
     { name = "invoke", specifier = ">=2.2" },
-    { name = "nornir", git = "https://github.com/nornir-automation/nornir?rev=01bac1d326092489d688a72cd9d19569c6e1688a" },
-    { name = "nornir-scrapli", extras = ["asyncio"], git = "https://github.com/scrapli/nornir_scrapli?rev=5ea33b7de9fa4fb035c76b2032bcd1e0d7660825" },
+    { name = "nornir", specifier = "==3.7.0a1" },
+    { name = "nornir-scrapli", extras = ["asyncio"], specifier = "==1.6.0a1" },
     { name = "nornir-utils", specifier = ">=0.2" },
 ]
 
@@ -697,8 +701,8 @@ dev = [
 
 [[package]]
 name = "nornir-scrapli"
-version = "2026.10.13"
-source = { git = "https://github.com/scrapli/nornir_scrapli?rev=5ea33b7de9fa4fb035c76b2032bcd1e0d7660825#5ea33b7de9fa4fb035c76b2032bcd1e0d7660825" }
+version = "1.6.0a1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nornir" },
     { name = "nornir-utils" },
@@ -708,6 +712,10 @@ dependencies = [
     { name = "scrapli-community" },
     { name = "scrapli-netconf" },
     { name = "textfsm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7c/c2/6db96fb989d7961cc90188cf538f3dec8db91221059a6399fee8f8811e8f/nornir_scrapli-1.6.0a1.tar.gz", hash = "sha256:45e90366e4bdd231b52c2d0447c919a9d5f9df94c6579dbc68d594339047a109", size = 19036, upload-time = "2026-11-15T15:32:34.634Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/1b/eb06b895b970a24c784b0155956d360034062bf826860016bad2a1d7ea0d/nornir_scrapli-1.6.0a1-py3-none-any.whl", hash = "sha256:3aef49e0b686c6b2bef7093d0ff7f09632cc5153d416f39d0f5d05d6d37d1674", size = 37194, upload-time = "2026-11-15T15:32:33.282Z" },
 ]
 
 [package.optional-dependencies]

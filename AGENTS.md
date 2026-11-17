@@ -31,15 +31,21 @@ uv run invoke test
 
 - Scripts are a cyclopts `App` with one `@app.default` `async def main()`
   function. Use the `Hosts` and `Verbose` types and `print_summary()` from
-  `nornir_sandbox.cli`, open Nornir with `async with init_nornir(...) as nr:`,
-  run tasks with `await nr.arun(...)`, and return 1 when a task fails.
+  `nornir_sandbox.cli`, create Nornir with `nr = await init_nornir(...)`, open
+  it with `async with nr:`, run tasks with `await nr.arun(...)`, and return 1
+  when a task fails.
 - Nornir uses the `asyncio` runner. Tasks are `async def` coroutines; use
   `nornir_scrapli.async_tasks`, not `nornir_scrapli.tasks`. Do not call blocking
   code (file I/O, `time.sleep`, sockets) in a task; use `asyncio.to_thread()` or
   the asyncio equivalent.
 - Device access goes through the asyncio scrapli connection (`tasks/eos.py`).
   Parse EOS output with `| json`, not text parsing.
-- nornir and nornir-scrapli come from unreleased Git commits pinned in
-  `[tool.uv.sources]` in `pyproject.toml`; update both `rev` values together.
+- nornir (3.7.0a1) and nornir-scrapli (1.6.0a1) are PyPI pre-releases pinned
+  with `==` in `pyproject.toml`; update both versions together.
+- `init_nornir()` is a coroutine (`AInitNornir`). Outside the event loop, use
+  `init_nornir_sync()`.
+- The runner stops a host after `per_host_timeout` seconds and does not close
+  its connection. Call `close_failed_connections(nr, result)` before running
+  another task on the same hosts.
 - Logic that does not need a device goes in plain functions with unit tests
   (`checks.py`).

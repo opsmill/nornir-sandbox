@@ -27,9 +27,9 @@ Login: `admin` / `admin`, SSH on the management address.
   set `CONTAINERLAB="sudo containerlab"`.
 - The cEOS image `registry.opsmill.io/external/ceos-image:4.29.0.2F`. To use
   another image, change `topology.kinds.ceos.image` in `lab/sandbox.clab.yml`.
-- [uv](https://docs.astral.sh/uv/). `uv sync` installs Nornir and nornir-scrapli
-  from Git commits, so it needs access to github.com (see
-  [Unreleased Nornir and nornir-scrapli](#unreleased-nornir-and-nornir-scrapli)).
+- [uv](https://docs.astral.sh/uv/). `uv sync` installs pre-releases of Nornir
+  and nornir-scrapli from PyPI (see
+  [Pre-releases of Nornir and nornir-scrapli](#pre-releases-of-nornir-and-nornir-scrapli)).
 - About 3 GB of free memory for the three devices.
 
 ## Start and stop the lab
@@ -109,7 +109,7 @@ lab/
 scripts/                    command-line scripts, one directory per type
   backup/ execute/ troubleshoot/ validate/
 src/nornir_sandbox/         shared Python package
-  core.py                   init_nornir(): Nornir object for the lab (asyncio runner), with a host filter
+  core.py                   init_nornir(): Nornir object for the lab (asyncio runner, time limit), with a host filter
   tasks/                    Nornir coroutine tasks (backup, access check, validation, EOS helpers)
   checks.py                 compares device output with the expected links; no device access
   cli.py                    --hosts and --verbose options and result summary shared by the scripts
@@ -142,23 +142,33 @@ time (`num_workers` of `init_nornir()`).
 - The tasks from nornir-scrapli are in `nornir_scrapli.async_tasks`, for
   example `send_commands`. The ones in `nornir_scrapli.tasks` are synchronous
   and fail with the asyncio runner.
-- Open the Nornir object with `async with init_nornir(...) as nr:`. On exit, it
-  closes the connections of every host, failed hosts included, before the
-  event loop stops.
+- Create the Nornir object with `nr = await init_nornir(...)`. It uses
+  `AInitNornir`, which loads the inventory in a worker thread, so the event
+  loop is not blocked. `init_nornir_sync()` uses `InitNornir`; use it only
+  outside the event loop, as the `--hosts` validation in `cli.py` does.
+- Run the tasks inside `async with nr:`. On exit, it closes the connections of
+  every host, failed hosts included, before the event loop stops.
+- Each host may spend 60 seconds on one run (`per_host_timeout` of
+  `init_nornir()`). Nornir stops a host that takes longer at the call it is
+  awaiting and gives it a failed result with `TaskTimeoutError`; the other
+  hosts are not affected. Nornir does not close the connection of that host.
+  Before you run another task on the same hosts, call
+  `await close_failed_connections(nr, result)`, as
+  `scripts/validate/validate_lab.py` does between two checks.
 - Code that blocks, such as file writes or `time.sleep()`, stops every host
   while it runs. Use `await asyncio.to_thread(...)` or `await asyncio.sleep()`,
   as in `tasks/backup.py` and `scripts/troubleshoot/check_access.py`.
 
-### Unreleased Nornir and nornir-scrapli
+### Pre-releases of Nornir and nornir-scrapli
 
-The asyncio runner
-([nornir-automation/nornir#1111](https://github.com/nornir-automation/nornir/pull/1111))
-and the asyncio scrapli connection and tasks
-([scrapli/nornir_scrapli#179](https://github.com/scrapli/nornir_scrapli/pull/179))
-are not released. `pyproject.toml` installs both from Git commits under
-`[tool.uv.sources]`. nornir-scrapli requires the same Nornir commit, so when
-you move to newer commits, change both `rev` values together and run
-`uv lock`.
+The asyncio runner, `AInitNornir` and the time limits are in Nornir 3.7.0a1.
+The asyncio scrapli connection and tasks are in nornir-scrapli 1.6.0a1, which
+requires Nornir 3.7.0a1 or later. Both are pre-releases on PyPI, and their
+APIs can still change. `pyproject.toml` pins the exact versions, because uv
+and pip install a pre-release only when the version is given. To move to a
+newer pre-release, change both versions and run `uv lock`. The Nornir guide
+[Testing the 3.7 pre-releases](https://github.com/nornir-automation/nornir/blob/v3.7.0a1/docs/upgrading/testing_3_7_prereleases.rst)
+lists what changed.
 
 ## Add your own code
 
@@ -166,7 +176,7 @@ you move to newer commits, change both `rev` values together and run
   new type directory). Start from `scripts/validate/validate_lab.py`: a
   cyclopts `App`, an `async def main()` function using the `Hosts` and
   `Verbose` option types from `nornir_sandbox.cli`,
-  `async with init_nornir(hosts=...) as nr:`, `await nr.arun(...)`, and
+  `nr = await init_nornir(hosts=...)`, `async with nr:`, `await nr.arun(...)`, and
   `print_summary(...)` for the output and exit code.
 - A new Nornir task: add it as an `async def` function to
   `src/nornir_sandbox/tasks/`. Use `await send()` or `await send_json()` from

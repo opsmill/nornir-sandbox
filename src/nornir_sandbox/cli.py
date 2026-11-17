@@ -12,13 +12,17 @@ from typing import Annotated, Any
 from cyclopts import Parameter
 from nornir.core.task import AggregatedResult
 
-from nornir_sandbox.core import init_nornir
+from nornir_sandbox.core import init_nornir_sync
 
 
 def _known_hosts(type_: Any, value: list[str] | None) -> None:
-    """Reject host names that are not in the inventory, as a usage error instead of a traceback."""
+    """Reject host names that are not in the inventory, as a usage error instead of a traceback.
+
+    cyclopts validates the options before it starts the event loop, so this uses the
+    synchronous `init_nornir_sync()`.
+    """
     if value:
-        init_nornir(hosts=value)
+        init_nornir_sync(hosts=value)
 
 
 Hosts = Annotated[

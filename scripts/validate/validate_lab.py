@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from cyclopts import App, Parameter
 
-from nornir_sandbox import init_nornir
+from nornir_sandbox import close_failed_connections, init_nornir
 from nornir_sandbox.cli import Hosts, Verbose, print_summary
 from nornir_sandbox.tasks import validate_interfaces, validate_lldp
 
@@ -34,9 +34,14 @@ async def main(
         interfaces: every link interface has line protocol up.
         lldp: LLDP neighbors match the links, with no extra neighbors.
     """
-    async with init_nornir(hosts=hosts) as nr:
+    nr = await init_nornir(hosts=hosts)
+    async with nr:
         # on_failed=True: a host that fails one check still runs the others.
-        results = [await nr.arun(task=CHECKS[name], on_failed=True) for name in check or CHECKS]
+        results = []
+        for name in check or CHECKS:
+            result = await nr.arun(task=CHECKS[name], on_failed=True)
+            await close_failed_connections(nr, result)
+            results.append(result)
     return print_summary(results, verbose=verbose)
 
 

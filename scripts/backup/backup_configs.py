@@ -27,7 +27,8 @@ async def main(*, hosts: Hosts = None, output_dir: Path | None = None, verbose: 
         Directory for the .cfg files. Default: backups/<YYYYmmdd-HHMMSS>.
     """
     target = output_dir or BACKUP_DIR / datetime.now().strftime("%Y%m%d-%H%M%S")
-    async with init_nornir(hosts=hosts) as nr:
+    nr = await init_nornir(hosts=hosts)
+    async with nr:
         result = await nr.arun(task=backup_config, backup_dir=target)
     exit_code = print_summary([result], verbose=verbose)
 
