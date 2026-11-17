@@ -12,7 +12,7 @@ from nornir.core.run import RunStream
 from nornir_sandbox import init_nornir, init_nornir_sync
 from nornir_sandbox.operations import ASYNC_CONNECTION, SYNC_CONNECTION, Facts, GetFacts
 
-OPERATIONS = {"get_config", "get_facts", "get_lldp_neighbors", "set_interface_descriptions"}
+OPERATIONS = {"get_config", "get_facts", "get_interfaces", "get_lldp_neighbors", "set_interface_descriptions"}
 PLATFORMS = {"arista_eos", "nokia_srlinux"}
 
 

@@ -1,16 +1,21 @@
 """The Operations of the sandbox: a name, an input model and an output model each.
 
-The models are frozen dataclasses. Nornir builds the input from what the caller passes
-(an instance, a mapping of its fields, or a function of the host) and checks that each
-host's task returns an instance of the output model.
+Most models are frozen dataclasses; get_interfaces uses Pydantic models. Nornir builds
+the input from what the caller passes (an instance, a mapping of its fields, or a
+function of the host) and checks that each host's task returns an instance of the output
+model. For a Pydantic input model, Nornir passes a mapping to `model_validate()`, so
+Pydantic checks the types and values of the fields, and rejects unknown fields when the
+model forbids them, before any host connects.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Literal
 
 from nornir.core.operations import Operation
+from pydantic import BaseModel, ConfigDict, Field
 
 from nornir_sandbox.checks import LldpNeighbor
 
@@ -96,3 +101,46 @@ class SetInterfaceDescriptions(Operation[SetInterfaceDescriptionsInput, SetInter
     fails without changing anything when an interface does not exist."""
 
     name = "set_interface_descriptions"
+
+
+# get_interfaces uses Pydantic models instead of dataclasses.
+
+InterfaceState = Literal["up", "down"]
+
+
+class GetInterfacesInput(BaseModel):
+    """Which interfaces to read. Nornir validates a mapping such as
+    `{"oper_state": "up"}` with this model; a misspelled field or a state other than
+    "up" or "down" fails the run before any host connects."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    oper_state: InterfaceState | None = None
+    """Read only the interfaces in this operational state. None reads every interface."""
+
+
+class Interface(BaseModel):
+    """One interface, with the states of both platforms mapped to "up" and "down"."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    description: str = ""
+    admin_state: InterfaceState
+    oper_state: InterfaceState
+    mtu: int | None = Field(default=None, gt=0)
+    """MTU in bytes. None when the device does not report it: SR Linux reports no MTU
+    for a disabled interface."""
+
+
+class Interfaces(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    interfaces: tuple[Interface, ...]
+
+
+class GetInterfaces(Operation[GetInterfacesInput, Interfaces]):
+    """Read the description, administrative and operational state, and MTU of every
+    interface, the management interface included."""
+
+    name = "get_interfaces"

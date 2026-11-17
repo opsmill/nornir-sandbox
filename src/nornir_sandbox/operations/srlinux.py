@@ -14,7 +14,9 @@ from nornir_sandbox.operations.contracts import (
     Facts,
     GetConfigInput,
     GetFactsInput,
+    GetInterfacesInput,
     GetLldpNeighborsInput,
+    Interfaces,
     LldpNeighbors,
     SetInterfaceDescriptionsInput,
     SetInterfaceDescriptionsOutput,
@@ -24,12 +26,14 @@ from nornir_sandbox.operations.parse import (
     description_result,
     srlinux_facts,
     srlinux_interface_descriptions,
+    srlinux_interfaces,
     srlinux_lldp_neighbors,
 )
 from nornir_sandbox.srlinux import configure, configure_sync, send, send_json, send_json_sync, send_sync
 
 LLDP_NEIGHBORS = "info from state /system lldp interface * neighbor *"
 # admin-state makes SR Linux list the interfaces that have no description.
+INTERFACES = "info from state /interface * | filter fields description admin-state oper-state mtu"
 DESCRIPTIONS = "info from state /interface * | filter fields description admin-state"
 
 
@@ -84,3 +88,11 @@ def set_interface_descriptions_sync(
     if changes:
         configure_sync(task, _description_lines(changes))
     return description_result(task, current, params.descriptions)
+
+
+async def get_interfaces(task: Task, params: GetInterfacesInput) -> Interfaces:
+    return srlinux_interfaces(await send_json(task, INTERFACES), params)
+
+
+def get_interfaces_sync(task: Task, params: GetInterfacesInput) -> Interfaces:
+    return srlinux_interfaces(send_json_sync(task, INTERFACES), params)

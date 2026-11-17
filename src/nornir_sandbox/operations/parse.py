@@ -6,7 +6,7 @@ tested without the lab.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from nornir.core.task import Result, Task
@@ -14,6 +14,9 @@ from nornir.core.task import Result, Task
 from nornir_sandbox.checks import LldpNeighbor
 from nornir_sandbox.operations.contracts import (
     Facts,
+    GetInterfacesInput,
+    Interface,
+    Interfaces,
     LldpNeighbors,
     SetInterfaceDescriptionsOutput,
 )
@@ -92,6 +95,55 @@ def srlinux_interface_descriptions(data: Mapping[str, Any]) -> dict[str, str]:
     no description when only description is requested.
     """
     return {str(entry["name"]): str(entry.get("description", "")) for entry in data.get("interface", [])}
+
+
+def eos_interfaces(data: Mapping[str, Any], params: GetInterfacesInput) -> Interfaces:
+    """Build Interfaces from EOS `show interfaces | json`.
+
+    EOS reports `interfaceStatus` "disabled" for an interface that is shut down, and
+    `lineProtocolStatus` "up" for an interface that is operational.
+    """
+    return _select_interfaces(
+        (
+            Interface(
+                name=name,
+                description=str(state.get("description", "")),
+                admin_state="down" if state.get("interfaceStatus") == "disabled" else "up",
+                oper_state="up" if state.get("lineProtocolStatus") == "up" else "down",
+                mtu=state.get("mtu"),
+            )
+            for name, state in data["interfaces"].items()
+        ),
+        params,
+    )
+
+
+def srlinux_interfaces(data: Mapping[str, Any], params: GetInterfacesInput) -> Interfaces:
+    """Build Interfaces from SR Linux
+    `info from state /interface * | filter fields description admin-state oper-state mtu | as json`.
+
+    SR Linux reports `admin-state` "enable" or "disable", and leaves out `mtu` and
+    `description` when they are not set.
+    """
+    return _select_interfaces(
+        (
+            Interface(
+                name=str(entry["name"]),
+                description=str(entry.get("description", "")),
+                admin_state="up" if entry.get("admin-state") == "enable" else "down",
+                oper_state="up" if entry.get("oper-state") == "up" else "down",
+                mtu=entry.get("mtu"),
+            )
+            for entry in data.get("interface", [])
+        ),
+        params,
+    )
+
+
+def _select_interfaces(interfaces: Iterable[Interface], params: GetInterfacesInput) -> Interfaces:
+    return Interfaces(
+        interfaces=tuple(i for i in interfaces if params.oper_state is None or i.oper_state == params.oper_state)
+    )
 
 
 def description_changes(current: Mapping[str, str], requested: Mapping[str, str]) -> dict[str, str]:
