@@ -11,6 +11,7 @@ dependencies = [
     "nornir",
     "nornir-scrapli[asyncio]==1.6.0a1",
     "nornir-utils>=0.2",
+    "pydantic>=2.7",
 ]
 
 # Operations and their tasks, read by Nornir the first time a script runs an Operation.
@@ -20,6 +21,7 @@ dependencies = [
 get_facts = "nornir_sandbox.operations.contracts:GetFacts"
 get_config = "nornir_sandbox.operations.contracts:GetConfig"
 get_lldp_neighbors = "nornir_sandbox.operations.contracts:GetLldpNeighbors"
+get_interfaces = "nornir_sandbox.operations.contracts:GetInterfaces"
 set_interface_descriptions = "nornir_sandbox.operations.contracts:SetInterfaceDescriptions"
 
 [project.entry-points."nornir.plugins.operation_tasks"]
@@ -35,6 +37,10 @@ set_interface_descriptions = "nornir_sandbox.operations.contracts:SetInterfaceDe
 "get_lldp_neighbors.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_lldp_neighbors_sync"
 "get_lldp_neighbors.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_lldp_neighbors"
 "get_lldp_neighbors.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_lldp_neighbors_sync"
+"get_interfaces.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_interfaces"
+"get_interfaces.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_interfaces_sync"
+"get_interfaces.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_interfaces"
+"get_interfaces.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_interfaces_sync"
 "set_interface_descriptions.arista_eos.scrapli" = "nornir_sandbox.operations.eos:set_interface_descriptions"
 "set_interface_descriptions.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:set_interface_descriptions_sync"
 "set_interface_descriptions.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:set_interface_descriptions"
@@ -79,6 +85,12 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 python_version = "3.11"
 strict = true
 files = ["src", "scripts", "tests", "tasks.py"]
+plugins = ["pydantic.mypy"]
+
+# Type-check the arguments of the Pydantic models' __init__ as their field types.
+[tool.pydantic-mypy]
+init_typed = true
+init_forbid_extra = true
 
 [[tool.mypy.overrides]]
 module = ["nornir_scrapli.*", "nornir_utils.*"]

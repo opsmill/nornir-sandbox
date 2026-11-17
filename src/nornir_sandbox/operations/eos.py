@@ -15,7 +15,9 @@ from nornir_sandbox.operations.contracts import (
     Facts,
     GetConfigInput,
     GetFactsInput,
+    GetInterfacesInput,
     GetLldpNeighborsInput,
+    Interfaces,
     LldpNeighbors,
     SetInterfaceDescriptionsInput,
     SetInterfaceDescriptionsOutput,
@@ -25,6 +27,7 @@ from nornir_sandbox.operations.parse import (
     description_result,
     eos_facts,
     eos_interface_descriptions,
+    eos_interfaces,
     eos_lldp_neighbors,
 )
 
@@ -78,3 +81,11 @@ def set_interface_descriptions_sync(
     if changes:
         configure_sync(task, _description_lines(changes))
     return description_result(task, current, params.descriptions)
+
+
+async def get_interfaces(task: Task, params: GetInterfacesInput) -> Interfaces:
+    return eos_interfaces(await send_json(task, "show interfaces"), params)
+
+
+def get_interfaces_sync(task: Task, params: GetInterfacesInput) -> Interfaces:
+    return eos_interfaces(send_json_sync(task, "show interfaces"), params)

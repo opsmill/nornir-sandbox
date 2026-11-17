@@ -56,8 +56,11 @@ uv run invoke test
   parsing.
 - Scripts that send EOS commands use the `EosHosts` option type and pass
   `platform=PLATFORM` (from `nornir_sandbox.eos`) to `init_nornir()` or
-  `init_nornir_sync()`, so they skip srl1. Scripts that work on every platform use `Hosts` and Operations.
-- Operations: contracts in `operations/contracts.py`, one `async def` and one
+  `init_nornir_sync()`, so they skip srl1. Scripts that work on every platform
+  use `Hosts` and Operations.
+- Operations: contracts in `operations/contracts.py`, with frozen dataclass
+  models, or Pydantic models (`frozen=True`, `extra="forbid"`) as in
+  `get_interfaces`; one `async def` and one
   `def` (`_sync`) task per platform in `operations/eos.py` and
   `operations/srlinux.py`, registered in `pyproject.toml` as
   `<operation>.<platform>.scrapli` (async) and `<operation>.<platform>.scrapli_sync`

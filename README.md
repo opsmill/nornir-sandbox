@@ -204,14 +204,34 @@ output model, which mypy knows. The calling code has no condition on
 [nornir-automation/nornir#1115](https://github.com/nornir-automation/nornir/pull/1115)
 (branch [`dga/feat-operation-s0e5v`](https://github.com/nornir-automation/nornir/tree/dga/feat-operation-s0e5v)).
 
-The sandbox defines four Operations in `src/nornir_sandbox/operations/contracts.py`:
+The sandbox defines five Operations in `src/nornir_sandbox/operations/contracts.py`:
 
 | Operation                    | Input                         | Output                                           |
 |------------------------------|-------------------------------|--------------------------------------------------|
 | `get_facts`                  | none                          | `Facts`: hostname, vendor, model, OS version, serial number |
 | `get_config`                 | none                          | `Config`: running configuration as CLI text      |
 | `get_lldp_neighbors`         | none                          | `LldpNeighbors`: local interface, neighbor name and port |
+| `get_interfaces`             | optional `oper_state` filter  | `Interfaces`: name, description, administrative and operational state, MTU of each interface |
 | `set_interface_descriptions` | description of each interface | `previous` description of each interface; `changed` and `diff` on the result |
+
+The models of `get_interfaces` are Pydantic models; the models of the other
+Operations are frozen dataclasses. Nornir accepts both:
+
+- Nornir builds a Pydantic input model with `model_validate()`, so a mapping
+  such as `{"oper_state": "up"}` is checked against the field types.
+  `GetInterfacesInput` forbids unknown fields, so a misspelled field fails too.
+  `run_operation()` and `arun_operation()` raise `OperationInputError`, with
+  Pydantic's message, before any host connects.
+- Nornir checks that each host's task returns an instance of the output model.
+  A Pydantic output model also checks its own fields when the task builds it:
+  `Interface` accepts only `"up"` and `"down"` as states and a positive MTU, so
+  a parse function that maps a state wrongly fails the host with a
+  `ValidationError` that names the field.
+- A Pydantic result converts to JSON with `model_dump_json()` and back with
+  `model_validate_json()`.
+
+mypy checks the arguments of the Pydantic models with the `pydantic.mypy`
+plugin (`[tool.pydantic-mypy]` in `pyproject.toml`).
 
 `operations/eos.py` and `operations/srlinux.py` implement each Operation for
 `arista_eos` and `nokia_srlinux`, twice: an `async def` task for the asyncio
@@ -246,6 +266,10 @@ Each script in `scripts/operations/` has a sync form (`*_sync.py`,
   built from its links. Each host reports `changed` and a diff; a second run
   with the same template reports no change. A host fails, without any change,
   when one of its interfaces does not exist.
+- `get_interfaces_*.py`: prints the state, MTU and description of the
+  interfaces of every device. `--params` takes the input of the Operation as
+  JSON and passes it to Nornir unchanged, so Pydantic validates it. `--json`
+  prints each result with `model_dump_json()`.
 - `list_operations.py`: prints the Operations, their models and their tasks,
   without connecting to any device.
 
@@ -254,6 +278,8 @@ uv run python scripts/operations/get_facts_async.py
 uv run python scripts/operations/get_facts_sync.py --runner serial
 uv run python scripts/operations/set_descriptions_async.py --template "link to {peer} {peer_interface}"
 uv run python scripts/operations/set_descriptions_sync.py     # restore the startup descriptions
+uv run python scripts/operations/get_interfaces_async.py --params '{"oper_state": "up"}'
+uv run python scripts/operations/get_interfaces_sync.py --json
 uv run python scripts/operations/list_operations.py
 ```
 
@@ -383,8 +409,8 @@ change the Nornir revision in both places and run `uv lock`.
   `nornir_sandbox.eos` to run commands on EOS; they raise `EOSCommandError` when
   EOS rejects a command. Put logic that does not need a device in a plain
   function, as in `checks.py`, so it can be unit tested.
-- A new Operation: define its models and its class in
-  `src/nornir_sandbox/operations/contracts.py`, write an `async def` and a `def`
+- A new Operation: define its models, as dataclasses or Pydantic models, and its
+  class in `src/nornir_sandbox/operations/contracts.py`, write an `async def` and a `def`
   task in `operations/eos.py` and `operations/srlinux.py`, put the parsing of
   the device output in `operations/parse.py` with a unit test, and register the
   class and the four tasks in `pyproject.toml`. Run `uv sync`, then
