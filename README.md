@@ -249,6 +249,29 @@ connection, so the sandbox registers the async tasks under the connection name
 `init_nornir_sync()` set `core.operation_connection` to the name that matches
 the runner, so the scripts do not pass `connection=`.
 
+A program can also register a task in code, without an entry point, with
+`OperationRegistry.register()` from `nornir.core.operations`. The `get_config`
+tasks are registered this way: `pyproject.toml` has no task entry points for
+`get_config`, and `scripts/operations/backup_configs_*.py` register the tasks
+they need before they run the Operation:
+
+```python
+from nornir.core.operations import OperationRegistry
+
+from nornir_sandbox.operations import ASYNC_CONNECTION, GetConfig, eos, srlinux
+
+for platform, task in (("arista_eos", eos.get_config), ("nokia_srlinux", srlinux.get_config)):
+    OperationRegistry.register(operation=GetConfig.name, platform=platform, connection=ASYNC_CONNECTION, task=task)
+```
+
+Registering the same task again for the same key does nothing. Registering a
+different task for a key that already has one raises
+`OperationAlreadyRegisteredError`, unless you pass `replace=True`. The
+`GetConfig` class registers the Operation itself when it is defined, so the
+Operation needs no entry point either; the sandbox keeps one so that
+`list_operations.py` lists it. `list_operations.py` shows no tasks for
+`get_config`, because it does not register them.
+
 Each script in `scripts/operations/` has a sync form (`*_sync.py`,
 `nr.run_operation()`, `--runner threaded` or `serial`) and an async form
 (`*_async.py`, `nr.arun_operation()`). Both read the results with
@@ -258,6 +281,7 @@ Each script in `scripts/operations/` has a sync form (`*_sync.py`,
   every device.
 - `backup_configs_*.py`: saves the running configuration of every device under
   `backups/`, as `scripts/backup/backup_configs.py` does for the cEOS devices.
+  They register the `get_config` tasks in code before they run the Operation.
 - `validate_lldp_*.py`: checks the LLDP neighbors of every device against the
   links in `inventory/hosts.yaml`, with one function for both platforms.
 - `set_descriptions_*.py`: sets the description of every link interface from
@@ -413,7 +437,8 @@ change the Nornir revision in both places and run `uv lock`.
   class in `src/nornir_sandbox/operations/contracts.py`, write an `async def` and a `def`
   task in `operations/eos.py` and `operations/srlinux.py`, put the parsing of
   the device output in `operations/parse.py` with a unit test, and register the
-  class and the four tasks in `pyproject.toml`. Run `uv sync`, then
+  class and the four tasks in `pyproject.toml`, or register the tasks in code
+  with `OperationRegistry.register()` as the backup scripts do for `get_config`. Run `uv sync`, then
   `scripts/operations/list_operations.py` to check the registration.
 - A new Nornir plugin: add it to the package, for example under
   `src/nornir_sandbox/plugins/`, and register it in `pyproject.toml` under

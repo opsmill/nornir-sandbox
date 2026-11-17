@@ -15,6 +15,8 @@ dependencies = [
 ]
 
 # Operations and their tasks, read by Nornir the first time a script runs an Operation.
+# get_config has no task entry points: scripts/operations/backup_configs_*.py register
+# its tasks with OperationRegistry.register() before they run it.
 # Task names are <operation>.<platform>.<connection>: `scrapli` holds the async task and
 # `scrapli_sync` the sync task (see src/nornir_sandbox/operations/__init__.py).
 [project.entry-points."nornir.plugins.operations"]
@@ -29,10 +31,6 @@ set_interface_descriptions = "nornir_sandbox.operations.contracts:SetInterfaceDe
 "get_facts.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_facts_sync"
 "get_facts.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_facts"
 "get_facts.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_facts_sync"
-"get_config.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_config"
-"get_config.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_config_sync"
-"get_config.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_config"
-"get_config.nokia_srlinux.scrapli_sync" = "nornir_sandbox.operations.srlinux:get_config_sync"
 "get_lldp_neighbors.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_lldp_neighbors"
 "get_lldp_neighbors.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_lldp_neighbors_sync"
 "get_lldp_neighbors.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_lldp_neighbors"
