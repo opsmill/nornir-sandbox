@@ -8,6 +8,7 @@ requires-python = ">=3.11"
 dependencies = [
     "cyclopts>=5.2.0",
     "invoke>=2.2",
+    "netutils>=1.19.2",
     "nornir",
     "nornir-scrapli[asyncio]==1.6.0a1",
     "nornir-utils>=0.2",
@@ -27,6 +28,14 @@ get_interfaces = "nornir_sandbox.operations.contracts:GetInterfaces"
 set_interface_descriptions = "nornir_sandbox.operations.contracts:SetInterfaceDescriptions"
 
 [project.entry-points."nornir.plugins.operation_tasks"]
+"get_facts.cisco_iosxe.scrapli" = "nornir_sandbox.operations.ios:get_facts"
+"get_config.cisco_iosxe.scrapli" = "nornir_sandbox.operations.ios:get_config"
+"get_interfaces.cisco_iosxe.scrapli" = "nornir_sandbox.operations.ios:get_interfaces"
+"get_facts.cisco_iosxe.scrapli_sync" = "nornir_sandbox.operations.ios:get_facts_sync"
+"get_config.cisco_iosxe.scrapli_sync" = "nornir_sandbox.operations.ios:get_config_sync"
+"get_lldp_neighbors.cisco_iosxe.scrapli" = "nornir_sandbox.operations.ios:get_lldp_neighbors"
+"get_lldp_neighbors.cisco_iosxe.scrapli_sync" = "nornir_sandbox.operations.ios:get_lldp_neighbors_sync"
+"get_interfaces.cisco_iosxe.scrapli_sync" = "nornir_sandbox.operations.ios:get_interfaces_sync"
 "get_facts.arista_eos.scrapli" = "nornir_sandbox.operations.eos:get_facts"
 "get_facts.arista_eos.scrapli_sync" = "nornir_sandbox.operations.eos:get_facts_sync"
 "get_facts.nokia_srlinux.scrapli" = "nornir_sandbox.operations.srlinux:get_facts"

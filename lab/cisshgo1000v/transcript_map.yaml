@@ -1,0 +1,30 @@
+---
+# Custom cisshgo transcript map for cisshgo1000v.
+# Same csr1000v platform as the built-in map, plus "show interfaces" and
+# "show lldp neighbors". Paths are relative to this file.
+platforms:
+  csr1000v:
+    vendor: "cisco"
+    hostname: "cisshgo1000v"
+    username: "admin"
+    password: "admin"
+    command_transcripts:
+      "show interfaces": "show_interfaces.txt"
+      "show ip interface brief": "show_ip_interface_brief.txt"
+      "show lldp neighbors": "show_lldp_neighbors.txt"
+      "show running-config": "show_running-config.txt"
+      "show version": "show_version.txt"
+      "terminal length 0": "generic_empty_return.txt"
+      "terminal width 511": "generic_empty_return.txt"
+      "write mem": "write_mem.txt"
+    context_hierarchy:
+      "(config-if)#": "(config)#"
+      "(config)#": "#"
+      "#": ">"
+      ">": "exit"
+    context_search:
+      "interface": "(config-if)#"
+      "configure terminal": "(config)#"
+      "enable": "#"
+      "base": ">"
+    end_context: "#"

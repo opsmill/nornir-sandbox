@@ -36,3 +36,17 @@ srl1:
     links:
       - {interface: ethernet-1/1, peer: ceos1, peer_interface: Ethernet3}
       - {interface: ethernet-1/2, peer: ceos2, peer_interface: Ethernet3}
+
+ios1:
+  hostname: 172.24.100.31
+  port: 22
+  groups: [ios]
+  data:
+    links:
+      - {interface: FastEthernet0/0, peer: mgmt-sw01, peer_interface: GigabitEthernet1/0/12}
+      - {interface: FastEthernet3/0, peer: access-sw01, peer_interface: GigabitEthernet0/1}
+      - {interface: FastEthernet3/1, peer: access-sw02, peer_interface: GigabitEthernet0/1}
+      - {interface: FastEthernet3/4, peer: SEP00562B4C7A10, peer_interface: 00562B4C7A10:P1}
+      - {interface: FastEthernet3/8, peer: srv-web01, peer_interface: 5254.00ab.cd01}
+      - {interface: FastEthernet3/9, peer: srv-db01, peer_interface: 5254.00ab.cd02}
+    
