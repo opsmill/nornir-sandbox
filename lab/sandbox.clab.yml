@@ -46,6 +46,13 @@ topology:
       kind: nokia_srlinux
       mgmt-ipv4: 172.24.100.21
       startup-config: configs/srl1.cli
+    cios1:
+      kind: linux
+      image: ghcr.io/tbotnz/cisshgo:v1.0.0
+      binds:
+        - cisshgo1000v:/custom:ro
+      cmd: -l 1 -p 22 --transcript-map /custom/transcript_map.yaml
+      mgmt-ipv4: 172.24.100.31
 
   links:
     - endpoints: ["ceos1:eth1", "ceos2:eth1"]
