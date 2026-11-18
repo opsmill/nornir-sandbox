@@ -661,6 +661,15 @@ wheels = [
 ]
 
 [[package]]
+name = "netutils"
+version = "1.19.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/31/7e790b2a6c2e65ad1263f024e76909cf50a7de4eabd90d72ba7ac603a449/netutils-1.19.2.tar.gz", hash = "sha256:88dc05f93ab585203ab2c54bc89e7e9617eec536a6e0d3b1b58c0e594e9d67aa", size = 550105, upload-time = "2026-09-23T14:04:32.911Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f6/26/0ec1ec7a792e09d29b907a4ad86f3f258af3b8fb685f75621ab0c015d405/netutils-1.19.2-py3-none-any.whl", hash = "sha256:cae23538d670da9e38b271d1666c77181a2460088afa772ffe94370adc36a46f", size = 565795, upload-time = "2026-09-23T14:04:31.273Z" },
+]
+
+[[package]]
 name = "nornir"
 version = "3.6.1"
 source = { git = "https://github.com/nornir-automation/nornir?rev=0a17a4f62cff4e9485f5be5ef77e92b662ccf078#0a17a4f62cff4e9485f5be5ef77e92b662ccf078" }
@@ -675,6 +684,7 @@ source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },
     { name = "invoke" },
+    { name = "netutils" },
     { name = "nornir" },
     { name = "nornir-scrapli", extra = ["asyncio"] },
     { name = "nornir-utils" },
@@ -694,6 +704,7 @@ dev = [
 requires-dist = [
     { name = "cyclopts", specifier = ">=5.2.0" },
     { name = "invoke", specifier = ">=2.2" },
+    { name = "netutils", specifier = ">=1.19.2" },
     { name = "nornir", git = "https://github.com/nornir-automation/nornir?rev=0a17a4f62cff4e9485f5be5ef77e92b662ccf078" },
     { name = "nornir-scrapli", extras = ["asyncio"], specifier = "==1.6.0a1" },
     { name = "nornir-utils", specifier = ">=0.2" },

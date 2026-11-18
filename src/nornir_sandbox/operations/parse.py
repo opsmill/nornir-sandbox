@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from netutils.interface import canonical_interface_name
 from nornir.core.task import Result, Task
 
 from nornir_sandbox.checks import LldpNeighbor
@@ -28,6 +29,16 @@ class UnknownInterfaceError(LookupError):
     def __init__(self, interfaces: list[str]) -> None:
         super().__init__(f"interface(s) not found on the device: {', '.join(interfaces)}")
         self.interfaces = interfaces
+
+
+def ios_facts(version: Mapping[str, Any]) -> Facts:
+    return Facts(
+        hostname=str(version[0]["hostname"]),
+        vendor="Cisco",
+        model=str(version[0]["hardware"][0]),
+        os_version=str(version[0]["version"]),
+        serial_number=str(version[0]["serial"][0])
+    )
 
 
 def eos_facts(version: Mapping[str, Any], hostname: Mapping[str, Any]) -> Facts:
@@ -52,6 +63,18 @@ def srlinux_facts(version: Mapping[str, Any]) -> Facts:
         serial_number=str(info.get("Serial Number", "")),
     )
 
+def ios_lldp_neighbors(neighbors: list[Mapping[str, Any]]) -> LldpNeighbors:
+    """Build LldpNeighbors from EOS `show lldp neighbors | json`."""
+    return LldpNeighbors(
+        neighbors=tuple(
+            LldpNeighbor(
+                interface=canonical_interface_name(str(neighbor["local_interface"])),
+                peer=str(neighbor["neighbor_name"]),
+                peer_interface=canonical_interface_name(str(neighbor["neighbor_interface"])),
+            )
+            for neighbor in neighbors
+        )
+    )
 
 def eos_lldp_neighbors(data: Mapping[str, Any]) -> LldpNeighbors:
     """Build LldpNeighbors from EOS `show lldp neighbors | json`."""
@@ -95,6 +118,22 @@ def srlinux_interface_descriptions(data: Mapping[str, Any]) -> dict[str, str]:
     no description when only description is requested.
     """
     return {str(entry["name"]): str(entry.get("description", "")) for entry in data.get("interface", [])}
+
+
+def ios_interfaces(interfaces: list[Mapping[str, Any]], params: GetInterfaceInput) -> Interfaces:
+    return _select_interfaces(
+        (
+            Interface(
+                name=interface["interface"],
+                description=interface["description"],
+                oper_state="up" if interface["link_status"] == "up" and interface["protocol_status"] == "up" else "down",
+                admin_state="up" if interface["link_status"] != "administratively down" else "down",
+                mtu=interface["mtu"] or None
+            )
+            for interface in interfaces
+        ),
+        params,
+    )
 
 
 def eos_interfaces(data: Mapping[str, Any], params: GetInterfacesInput) -> Interfaces:
