@@ -37,7 +37,7 @@ def ios_facts(version: Mapping[str, Any]) -> Facts:
         vendor="Cisco",
         model=str(version[0]["hardware"][0]),
         os_version=str(version[0]["version"]),
-        serial_number=str(version[0]["serial"][0])
+        serial_number=str(version[0]["serial"][0]),
     )
 
 
@@ -63,6 +63,7 @@ def srlinux_facts(version: Mapping[str, Any]) -> Facts:
         serial_number=str(info.get("Serial Number", "")),
     )
 
+
 def ios_lldp_neighbors(neighbors: list[Mapping[str, Any]]) -> LldpNeighbors:
     """Build LldpNeighbors from EOS `show lldp neighbors | json`."""
     return LldpNeighbors(
@@ -75,6 +76,7 @@ def ios_lldp_neighbors(neighbors: list[Mapping[str, Any]]) -> LldpNeighbors:
             for neighbor in neighbors
         )
     )
+
 
 def eos_lldp_neighbors(data: Mapping[str, Any]) -> LldpNeighbors:
     """Build LldpNeighbors from EOS `show lldp neighbors | json`."""
@@ -120,15 +122,17 @@ def srlinux_interface_descriptions(data: Mapping[str, Any]) -> dict[str, str]:
     return {str(entry["name"]): str(entry.get("description", "")) for entry in data.get("interface", [])}
 
 
-def ios_interfaces(interfaces: list[Mapping[str, Any]], params: GetInterfaceInput) -> Interfaces:
+def ios_interfaces(interfaces: list[Mapping[str, Any]], params: GetInterfacesInput) -> Interfaces:
     return _select_interfaces(
         (
             Interface(
                 name=interface["interface"],
                 description=interface["description"],
-                oper_state="up" if interface["link_status"] == "up" and interface["protocol_status"] == "up" else "down",
+                oper_state="up"
+                if interface["link_status"] == "up" and interface["protocol_status"] == "up"
+                else "down",
                 admin_state="up" if interface["link_status"] != "administratively down" else "down",
-                mtu=interface["mtu"] or None
+                mtu=interface["mtu"] or None,
             )
             for interface in interfaces
         ),

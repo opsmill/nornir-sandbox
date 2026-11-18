@@ -1,28 +1,28 @@
 from __future__ import annotations
 
-from nornir.core.task import Result, Task
+from nornir.core.task import Task
 
 from nornir_sandbox.ios import (
     send,
+    send_and_parse,
+    send_and_parse_sync,
     send_sync,
-    send_and_parse,   
-    send_and_parse_sync,   
 )
 from nornir_sandbox.operations.contracts import (
     Config,
     Facts,
     GetConfigInput,
     GetFactsInput,
+    GetInterfacesInput,
+    GetLldpNeighborsInput,
+    Interfaces,
+    LldpNeighbors,
 )
-from nornir_sandbox.operations.parse import (
-    ios_facts,
-    ios_interfaces,
-    ios_lldp_neighbors
-)
+from nornir_sandbox.operations.parse import ios_facts, ios_interfaces, ios_lldp_neighbors
 
 
 async def get_facts(task: Task, params: GetFactsInput) -> Facts:
-   return ios_facts(await send_and_parse(task, "show version"))
+    return ios_facts(await send_and_parse(task, "show version"))
 
 
 async def get_config(task: Task, params: GetConfigInput) -> Config:

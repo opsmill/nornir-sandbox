@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-
 from nornir.core.task import Task
 
-PLATFROM="cisco_ios"
+PLATFROM = "cisco_ios"
+
 
 class IOSCommandError(Exception):
     """IOS rejected a command"""
@@ -23,6 +23,7 @@ async def send(task: Task, command: str) -> str:
     response = await conn.send_command(command)
     return _output(command, response)
 
+
 def send_sync(task: Task, command: str) -> str:
     """Run one command and return its text output. Raises IOSCommandError if EOS rejects it."""
 
@@ -30,12 +31,14 @@ def send_sync(task: Task, command: str) -> str:
     response = conn.send_command(command)
     return _output(command, response)
 
+
 def send_and_parse_sync(task: Task, command: str) -> dict[str, Any] | list[Any]:
     """Run one command and return its parsed output. Raises IOSCommandError if EOS rejects it."""
 
     conn = task.host.get_connection("scrapli", task.nornir.config)
     response = conn.send_command(command)
     return _output_parsed(command, response)
+
 
 async def send_and_parse(task: Task, command: str) -> dict[str, Any] | list[Any]:
     """Run one command and return its parsed output. Raises IOSCommandError if EOS rejects it."""
