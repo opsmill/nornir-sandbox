@@ -1,13 +1,17 @@
-"""Fixtures for the nornir_ray tests: a local Ray with one resource per site."""
+"""Shared test setup. The `ray_local` fixture starts Ray only for the tests that use it."""
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 
 import pytest
-import ray
 
-import nornir_ray  # noqa: F401 - configures Ray before its first import
+# Ray reads this when it is first imported; see src/nornir_ray/__init__.py. It is set
+# here, before any import of Ray, so it does not depend on the order of imports.
+os.environ.setdefault("RAY_ENABLE_UV_RUN_RUNTIME_ENV", "0")
+
+import ray
 
 # Each lab site is a Ray custom resource; the local Ray declares both, so actors placed by
 # site can run without the lab's Ray containers.

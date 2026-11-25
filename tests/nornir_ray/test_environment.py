@@ -14,3 +14,9 @@ def test_importing_nornir_ray_turns_off_rays_uv_run_integration() -> None:
     code = "import nornir_ray, ray._private.ray_constants as c; print(c.RAY_ENABLE_UV_RUN_RUNTIME_ENV)"
     output = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True)
     assert output.stdout.strip() == "False"
+
+
+def test_test_session_runs_without_rays_uv_run_integration() -> None:
+    import ray._private.ray_constants as constants
+
+    assert constants.RAY_ENABLE_UV_RUN_RUNTIME_ENV is False
