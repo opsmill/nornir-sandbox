@@ -103,7 +103,7 @@ class _UnpicklableError(Exception):
 def test_unpicklable_exception_becomes_remote_task_error() -> None:
     result = Result(None, failed=True, exception=_UnpicklableError("bad state"))
 
-    wire = pickle.loads(pickle.dumps(to_wire_result(result)))
+    wire = pickle.loads(cloudpickle.dumps(to_wire_result(result)))
 
     assert isinstance(wire.exception, RemoteTaskError)
     assert "_UnpicklableError" in str(wire.exception)
@@ -118,3 +118,22 @@ def test_partial_round_trip() -> None:
     assert wire == WirePartial(result="half", progress=0.5)
     back = from_wire_partial(wire, host)
     assert (back.host, back.result, back.progress) == (host, "half", 0.5)
+
+
+class _TwoArgumentError(Exception):
+    """Like Nornir's own errors: its constructor takes arguments that `args` does not hold."""
+
+    def __init__(self, connection: str, mode: str) -> None:
+        super().__init__(f"{connection} is open in {mode} mode")
+        self.connection = connection
+        self.mode = mode
+
+
+def test_exception_with_required_arguments_keeps_its_type() -> None:
+    result = Result(None, failed=True, exception=_TwoArgumentError("fake", "sync"))
+
+    back = from_wire_result(pickle.loads(cloudpickle.dumps(to_wire_result(result))), None)  # type: ignore[arg-type]
+
+    assert isinstance(back.exception, _TwoArgumentError)
+    assert (back.exception.connection, back.exception.mode) == ("fake", "sync")
+    assert str(back.exception) == "fake is open in sync mode"

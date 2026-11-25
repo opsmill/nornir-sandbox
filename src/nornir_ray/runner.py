@@ -14,8 +14,9 @@ new actor and a new connection.
 
 from __future__ import annotations
 
+import asyncio
 import threading
-from collections.abc import Generator, Iterator
+from collections.abc import AsyncGenerator, Generator, Iterator
 from typing import Any
 
 import ray
@@ -24,7 +25,7 @@ from nornir.core.inventory import Host
 from nornir.core.plugins.runners import CancellationDepth
 from nornir.core.run import RunContext, RunOptions
 from nornir.core.task import AggregatedResult, PartialResult, Result, Task
-from nornir.plugins.runners import ThreadedRunner
+from nornir.plugins.runners import AsyncioRunner, ThreadedRunner
 
 from nornir_ray.cluster import ActorPool, connect, resolve_address, site_available
 from nornir_ray.errors import HostActorDiedError
@@ -123,6 +124,48 @@ class RayRunner:
         run.add_cancel_callback(lambda: self._cancel_running(run))
         yield from ThreadedRunner(self.num_workers).execute(proxy_task, hosts, run)
         self._kill_timed_out(run)
+
+    async def arun(self, task: Task, hosts: list[Host]) -> AggregatedResult:
+        """Run the asynchronous task against the hosts and return their results."""
+        run = RunContext(task, hosts, self.run_options)
+        await self.aexecute(task, hosts, run)
+        return run.aggregated()
+
+    async def aexecute(self, task: Task, hosts: list[Host], run: RunContext) -> None:
+        """Run the hosts through async proxy tasks on Nornir's asyncio runner."""
+        await asyncio.to_thread(connect, resolve_address(self.address), self.resources)
+        call = _task_call(task)
+        ensure_serializable(call)
+        proxy = self._async_proxy(call)
+        proxy_task = Task(proxy, task.nornir, task.global_dry_run, task.processors, task.name, task.severity_level)
+        await AsyncioRunner(self.num_workers).aexecute(proxy_task, hosts, run)
+
+    def _async_proxy(self, call: TaskCall) -> Any:
+        runner = self
+
+        async def aproxy(task: Task) -> AsyncGenerator[PartialResult | Result, None]:
+            host = task.host
+            site = runner._site(host)
+            if site and not site_available(site):
+                yield PartialResult(host, f"no Ray worker for site {site}; waiting")
+            actor = runner.pool.get(host, site)
+            try:
+                async for ref in actor.run.remote(call):
+                    event = await ref
+                    if isinstance(event, WirePartial):
+                        yield from_wire_partial(event, host)
+                    elif isinstance(event, WireFinal):
+                        yield _final_result(task, event)
+                        return
+            except (asyncio.CancelledError, TaskInterruptedError):
+                # Cancelled or past its deadline: stop the call on the actor, keep the actor.
+                actor.cancel.remote()
+                raise
+            except ray.exceptions.RayActorError as error:
+                runner.pool.forget(host.name, actor)
+                raise HostActorDiedError(host.name, None, site, str(error)) from error
+
+        return aproxy
 
     def _kill_timed_out(self, run: RunContext) -> None:
         """Kill the actors of timed-out hosts whose call is still running.

@@ -146,5 +146,5 @@ def test_final_names_node_and_site(ray_local: None) -> None:
     assert final.node
 
 
-def test_open_connections_counts_each_mode(ray_local: None) -> None:
-    assert ray.get(_actor().open_connections.remote()) == {"sync": 0, "async": 0}
+def test_open_connections_is_empty_for_a_new_actor(ray_local: None) -> None:
+    assert ray.get(_actor().open_connections.remote()) == {}

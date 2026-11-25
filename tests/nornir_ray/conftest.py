@@ -7,6 +7,8 @@ from collections.abc import Iterator
 import pytest
 import ray
 
+import nornir_ray  # noqa: F401 - configures Ray before its first import
+
 # Each lab site is a Ray custom resource; the local Ray declares both, so actors placed by
 # site can run without the lab's Ray containers.
 LOCAL_SITES = {"site_a": 100.0, "site_b": 100.0}

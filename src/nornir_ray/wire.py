@@ -35,6 +35,25 @@ class TaskCall:
 
 
 @dataclass(frozen=True)
+class ExceptionPayload:
+    """An exception that pickle cannot rebuild through its constructor.
+
+    Many exceptions, Nornir's own among them, take constructor arguments that `args` does
+    not hold. The driver rebuilds them without calling the constructor.
+    """
+
+    cls: type[BaseException]
+    args: tuple[Any, ...]
+    state: dict[str, Any]
+
+    def restore(self) -> BaseException:
+        exception = self.cls.__new__(self.cls)
+        exception.args = self.args
+        exception.__dict__.update(self.state)
+        return exception
+
+
+@dataclass(frozen=True)
 class WireResult:
     """One `Result` without its host."""
 
@@ -43,7 +62,7 @@ class WireResult:
     changed: bool
     diff: str
     failed: bool
-    exception: BaseException | None
+    exception: BaseException | ExceptionPayload | None
     severity_level: int
 
 
@@ -90,18 +109,23 @@ def ensure_serializable(call: TaskCall) -> None:
         raise TaskNotSerializableError(call.name, str(error)) from error
 
 
-def _portable_exception(exception: BaseException | None) -> BaseException | None:
+def _portable_exception(exception: BaseException | None) -> BaseException | ExceptionPayload | None:
     if exception is None:
         return None
     try:
         pickle.loads(pickle.dumps(exception))
     except Exception:
-        return RemoteTaskError(type(exception).__name__, str(exception))
+        payload = ExceptionPayload(type(exception), exception.args, dict(getattr(exception, "__dict__", {})))
+        try:
+            pickle.loads(cloudpickle.dumps(payload)).restore()
+        except Exception:
+            return RemoteTaskError(type(exception).__name__, str(exception))
+        return payload
     return exception
 
 
 def to_wire_result(result: Result) -> WireResult:
-    """Return `result` without its host. An exception that cannot be pickled becomes `RemoteTaskError`."""
+    """Return `result` without its host. An exception that cannot travel at all becomes `RemoteTaskError`."""
     return WireResult(
         name=result.name,
         result=result.result,
@@ -121,7 +145,7 @@ def from_wire_result(wire: WireResult, host: Host, **extra: Any) -> Result:
         changed=wire.changed,
         diff=wire.diff,
         failed=wire.failed,
-        exception=wire.exception,
+        exception=wire.exception.restore() if isinstance(wire.exception, ExceptionPayload) else wire.exception,
         severity_level=wire.severity_level,
         **extra,
     )

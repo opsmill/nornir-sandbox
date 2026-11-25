@@ -252,5 +252,5 @@ def test_context_exit_closes_worker_connections(ray_local: None, tmp_path: Path)
     with nr:
         nr.run(task=open_fake_connection)
         actor = runner.pool.get(nr.inventory.hosts["h1"], "site_a")
-        assert ray.get(actor.open_connections.remote()) == {"sync": 1, "async": 0}
-    assert ray.get(actor.open_connections.remote()) == {"sync": 0, "async": 0}
+        assert ray.get(actor.open_connections.remote()) == {"fake": "sync"}
+    assert ray.get(actor.open_connections.remote()) == {}

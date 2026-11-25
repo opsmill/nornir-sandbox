@@ -135,9 +135,15 @@ class HostActorImpl:
             self._node = str(names[0]) if names and names[0] else node_id
         return self._node
 
-    async def open_connections(self) -> dict[str, int]:
-        """Return the number of open connections of the host, per mode."""
-        return {"sync": len(self.host.connections), "async": len(self.host._async_connections)}
+    async def open_connections(self) -> dict[str, str]:
+        """Return each open connection of the host and the mode it was opened in.
+
+        Nornir binds a connection to the mode (`sync` or `asyncio`) that opened it until
+        it is closed. A legacy connection plugin has no capability state and is `sync`.
+        """
+        states = self.host._capability_connections
+        names = set(self.host.connections) | set(self.host._async_connections)
+        return {name: str(states[name].mode) if name in states else "sync" for name in sorted(names)}
 
 
 HostActor = ray.remote(num_cpus=0, max_restarts=0, max_task_retries=0)(HostActorImpl)

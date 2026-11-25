@@ -71,7 +71,7 @@ host past its deadline gets a new actor on the next run.
 
 Given actors already exist for the three hosts,
 when the user runs two tasks in a row,
-then each device shows one SSH session per mode in `show users`, and the timing
+then each device shows one SSH session in `show users`, and the timing
 comparison reports the extra time against the local runner.
 
 ### P4: Site with no worker
@@ -90,7 +90,9 @@ is then recorded as timed out.
 - FR-003: The runner MUST deliver each `PartialResult` to `nr.stream()` /
   `nr.astream()` and to processors in the order the task yields it.
 - FR-004: The runner MUST reuse a host's connection across runs in the same driver
-  process, one connection per host per mode (sync, async).
+  process. Nornir 3.7.0a1 binds a connection to the mode (sync or asyncio) that
+  opened it until it is closed, so each host has one connection, in the mode of the
+  run that opened it; switching mode needs a close first, as with local runners.
 - FR-005: The runner MUST fail a run before any host starts, with an error naming
   the task, when the task or its parameters cannot be serialized.
 - FR-006: The runner MUST apply cancellation and deadlines as in D5. A host whose
@@ -110,7 +112,7 @@ is then recorded as timed out.
 - SC-001: P1, P2 and P4 give the same per-host outcome as the local runner in 10
   out of 10 repeated runs of each script.
 - SC-002: 100% of hosts run on a worker of their own site.
-- SC-003: Two runs in a row open exactly one connection per host per mode.
+- SC-003: Two runs in a row in the same mode open exactly one connection per host.
 - SC-004: A warm run on the three lab devices takes at most 100 ms longer than
   the local runner.
 - SC-005: A cold run takes at most 3 s longer than the local runner.
@@ -147,6 +149,13 @@ is then recorded as timed out.
 - 3.7.0a1 has no detach or re-attach API.
 - A Ray actor is one OS process, so one actor per host costs one process per
   host; SC-006 measures where this stops fitting on one machine.
+- Nornir 3.7.0a1 binds a connection name to one mode, so "one connection per host
+  per mode" is not possible; a host's actor holds one connection at a time.
+- Under `uv run`, Ray 2.60.1 copies the project to each worker and starts it with
+  `uv run`; concurrent workers race on creating that copy's virtual environment.
+  `nornir_ray` turns this off (`RAY_ENABLE_UV_RUN_RUNTIME_ENV=0`).
+- Exceptions whose constructor takes arguments not kept in `args` (Nornir's own,
+  among others) do not survive pickling; the runner rebuilds them on the driver.
 - A Ray driver must run on a Ray node (or use Ray Client), so "the driver stays
   thin" still requires the driver machine to join the cluster.
 
