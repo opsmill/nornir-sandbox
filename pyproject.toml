@@ -14,6 +14,9 @@ dependencies = [
     "ray==2.60.1",
 ]
 
+[project.entry-points."nornir.plugins.runners"]
+ray = "nornir_ray:RayRunner"
+
 [dependency-groups]
 dev = [
     "mypy>=1.13",
