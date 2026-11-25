@@ -23,7 +23,8 @@ def ray_local() -> Iterator[None]:
     """Start a local single-node Ray for the whole test session."""
     started = False
     if not ray.is_initialized():
-        ray.init(num_cpus=4, resources=LOCAL_SITES, include_dashboard=False, log_to_driver=False)
+        # "local": a new Ray, even when this machine has joined the lab cluster (`invoke ray-up`).
+        ray.init(address="local", num_cpus=4, resources=LOCAL_SITES, include_dashboard=False, log_to_driver=False)
         started = True
     yield
     if started:

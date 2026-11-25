@@ -1,0 +1,56 @@
+# Ray cluster for the Ray runner (runner "ray"): one head node and one worker per site,
+# on the lab's management network so the workers reach the cEOS devices.
+#
+# Each worker declares its site as a Ray custom resource; the runner places the actor of
+# a host whose data.site is site_a on ray-site-a, and so on. The head node has no CPUs,
+# so no actor runs on it.
+#
+# `invoke ray-up` starts this file, then joins the machine that runs the scripts as a
+# Ray node with no CPUs, so scripts connect as normal Ray drivers with
+# RAY_ADDRESS=172.24.100.21:6379. `invoke ray-down` reverses both.
+name: nornir-sandbox-ray
+
+x-ray-node: &ray-node
+  image: nornir-sandbox-ray
+  shm_size: 1g
+  restart: "no"
+
+services:
+  ray-head:
+    <<: *ray-node
+    build:
+      context: ../..
+      dockerfile: lab/ray/Dockerfile
+    command: >-
+      ray start --head --block --port=6379 --num-cpus=0 --include-dashboard=false
+      --node-name=ray-head --node-ip-address=172.24.100.21
+    networks:
+      sandbox-mgmt:
+        ipv4_address: 172.24.100.21
+
+  ray-site-a:
+    <<: *ray-node
+    depends_on: [ray-head]
+    command: >-
+      ray start --block --address=172.24.100.21:6379
+      --node-name=ray-site-a --node-ip-address=172.24.100.31
+      --resources='{"site_a": 100}'
+    networks:
+      sandbox-mgmt:
+        ipv4_address: 172.24.100.31
+
+  ray-site-b:
+    <<: *ray-node
+    depends_on: [ray-head]
+    command: >-
+      ray start --block --address=172.24.100.21:6379
+      --node-name=ray-site-b --node-ip-address=172.24.100.32
+      --resources='{"site_b": 100}'
+    networks:
+      sandbox-mgmt:
+        ipv4_address: 172.24.100.32
+
+networks:
+  sandbox-mgmt:
+    # Created by containerlab (`invoke up`).
+    external: true

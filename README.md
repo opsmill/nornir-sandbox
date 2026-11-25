@@ -67,6 +67,8 @@ for the options of one task.
 | `backup`                     | Save running configurations to `backups/<timestamp>/`.             |
 | `validate [--check lldp]`    | Check interfaces and LLDP neighbors against the inventory.         |
 | `lint` / `format` / `test`   | ruff and mypy / ruff fixes / unit tests (no lab needed).           |
+| `ray-up` / `ray-down`        | Start or stop the Ray cluster of the Ray runner (after `up`).      |
+| `ray-status`                 | Show the Ray nodes and their site resources.                       |
 
 `access`, `command`, `backup` and `validate` take `--hosts ceos1,ceos2` to work
 on some devices only (comma-separated for invoke, repeated `--hosts` for the
@@ -180,6 +182,41 @@ it sends another command to that host: `await close_failed_connections(nr, resul
 on the asyncio runner, or `host.close_connections()` on the threaded and serial
 runners.
 
+## Ray runner (prototype)
+
+`src/nornir_ray/` is a prototype of a Nornir runner that runs each host's task on
+a [Ray](https://www.ray.io/) actor, to validate the design in
+`docs/superpowers/specs/2026-11-25-ray-runner-design.md`. The runner is
+registered as `ray`; the six scripts in `scripts/runner/` accept `--runner ray`.
+
+- Each host gets one long-lived Ray actor, which keeps the host's connection open
+  between runs. Nornir binds a connection to the mode (sync or asyncio) that opened
+  it, so close the connections before you switch a host from sync to async tasks.
+- The actor runs on a Ray node that declares the host's site (`data.site` in
+  `inventory/hosts.yaml`) as a Ray resource. A host without a site runs on any node.
+  A host whose site has no node gets a progress event that names the site, then
+  waits until its deadline.
+- Cancellation stops a sync task at its next checkpoint and an async task at the
+  call it is awaiting, and keeps the actor and its connection. A sync host that
+  passes its deadline has its actor stopped, because its call may be blocked; the
+  next run creates a new actor and a new connection.
+- Without `RAY_ADDRESS`, the runner starts a local Ray on this machine, with no
+  sites: every host runs locally.
+
+The lab cluster has one head node and one worker per site, on the lab's management
+network:
+
+```bash
+uv run invoke up                 # the cluster uses the lab network
+uv run invoke ray-up             # head 172.24.100.21, site_a .31, site_b .32; joins this machine
+export RAY_ADDRESS=172.24.100.21:6379
+uv run python scripts/runner/stream_progress_sync.py --runner ray
+uv run invoke ray-down
+```
+
+Each final line ends with the node that ran the host, for example
+`[node ray-site-a]`.
+
 ## Repository layout
 
 ```text
@@ -190,9 +227,11 @@ inventory/                  Nornir inventory (SimpleInventory)
 lab/
   sandbox.clab.yml          containerlab topology
   configs/ceosN.cfg         startup configuration of each device
+  ray/                      Ray cluster of the Ray runner: image and Compose file
 scripts/                    command-line scripts, one directory per type
   backup/ execute/ troubleshoot/ validate/
   runner/                   streaming, cancellation and deadline examples, sync and async
+src/nornir_ray/             Ray runner prototype (runner "ray")
 src/nornir_sandbox/         shared Python package
   core.py                   init_nornir() and init_nornir_sync(): Nornir object for the lab (runner, time limits), with a host filter
   eos.py                    send(), send_json() and their sync versions, to run commands on EOS

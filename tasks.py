@@ -22,6 +22,11 @@ ROOT = Path(__file__).parent
 TOPOLOGY = "lab/sandbox.clab.yml"
 CONTAINERLAB = os.environ.get("CONTAINERLAB", "containerlab")
 PYTHON = "uv run python"
+RAY_COMPOSE = "docker compose -f lab/ray/compose.yml"
+RAY_ADDRESS = "172.24.100.21:6379"
+# Address of this machine on the lab network (the sandbox-mgmt bridge), used when it
+# joins the Ray cluster so that scripts here can be Ray drivers.
+RAY_DRIVER_IP = "172.24.100.1"
 
 
 def _hosts_option(hosts: str) -> str:
@@ -63,6 +68,39 @@ def status(c: Context) -> None:
     """Show the lab containers, their state and management addresses."""
     with c.cd(ROOT):
         c.run(f"{CONTAINERLAB} inspect -t {TOPOLOGY}", pty=True)
+
+
+@task(name="ray-up")
+def ray_up(c: Context) -> None:
+    """Start the Ray cluster on the lab network and join this machine to it, with no CPUs.
+
+    Run `invoke up` first: the cluster uses the lab's management network.
+    """
+    with c.cd(ROOT):
+        c.run(f"{RAY_COMPOSE} up -d --build --wait", pty=True)
+        c.run(
+            f"uv run ray start --address={RAY_ADDRESS} --num-cpus=0 --node-ip-address={RAY_DRIVER_IP} "
+            "--node-name=ray-driver",
+            # Without a pseudo-terminal: closing it would hang up the raylet this starts.
+            pty=False,
+            env={"RAY_ENABLE_UV_RUN_RUNTIME_ENV": "0"},
+        )
+    print(f"\nRun the scripts with the Ray runner on this cluster:\n  export RAY_ADDRESS={RAY_ADDRESS}")
+
+
+@task(name="ray-down")
+def ray_down(c: Context) -> None:
+    """Remove this machine from the Ray cluster, then stop the cluster's containers."""
+    with c.cd(ROOT):
+        c.run("uv run ray stop", pty=True, warn=True)
+        c.run(f"{RAY_COMPOSE} down", pty=True)
+
+
+@task(name="ray-status")
+def ray_status(c: Context) -> None:
+    """Show the Ray nodes and their resources, including the site resources."""
+    with c.cd(ROOT):
+        c.run(f"uv run ray status --address={RAY_ADDRESS}", pty=True)
 
 
 @task(help={"wait": "seconds to keep retrying hosts that fail", "hosts": "comma-separated host names"})

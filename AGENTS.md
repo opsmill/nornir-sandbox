@@ -9,10 +9,13 @@ them, and the shared `nornir_sandbox` package. See README.md for details.
   `defaults.yaml`). Each host lists its lab links under `data.links`.
 - `lab/`: containerlab topology (`sandbox.clab.yml`) and device startup
   configurations (`configs/`). Keep it in sync with `inventory/hosts.yaml`;
-  `tests/test_inventory.py` checks that they match.
+  `tests/test_inventory.py` checks that they match. `lab/ray/` holds the Ray
+  cluster of the Ray runner (image and Compose file), outside the topology.
 - `scripts/<type>/`: cyclopts command-line scripts grouped by type (backup,
   execute, troubleshoot, validate, runner). `scripts/runner/` holds sync and
   async examples of run streaming, cancellation and deadlines.
+- `src/nornir_ray/`: prototype of the Ray runner (plugin `ray`), to move to
+  its own package once validated. Design: `docs/superpowers/specs/`.
 - `src/nornir_sandbox/`: shared code: `init_nornir()`, `init_nornir_sync()`,
   EOS command helpers (`eos.py`), pure functions on device output
   (`checks.py`), shared cyclopts option types.
@@ -24,6 +27,7 @@ them, and the shared `nornir_sandbox` package. See README.md for details.
 uv sync
 uv run invoke up | down | restart | status    # lab lifecycle
 uv run invoke access | backup | validate      # work with the devices
+uv run invoke ray-up | ray-down | ray-status  # Ray cluster for --runner ray (after up)
 uv run invoke lint                            # ruff check, ruff format --check, mypy --strict
 uv run invoke format
 uv run invoke test
@@ -58,3 +62,9 @@ uv run invoke test
   another task on the same hosts.
 - Logic that does not need a device goes in plain functions with unit tests
   (`checks.py`).
+- Ray runner: `RAY_ADDRESS` selects the cluster; unset means a local Ray. Ray
+  is pinned with `==`. Importing `nornir_ray` sets `RAY_ENABLE_UV_RUN_RUNTIME_ENV=0`
+  before Ray is imported, and `tests/conftest.py` does the same for the tests;
+  keep both. Cancellation keeps a host's actor; a sync host past its deadline
+  has its actor killed. Tests that run tasks on Ray use the `ray_local` fixture
+  and `cloudpickle.register_pickle_by_value()` for their own module.

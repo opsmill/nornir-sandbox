@@ -34,15 +34,30 @@ def check_reachable(address: str, timeout: float = 5.0) -> None:
         raise RayClusterUnreachableError(address, str(error)) from error
 
 
+def local_ip_towards(address: str) -> str:
+    """Return the address of this machine on the route to `host:port`. Sends nothing."""
+    host, _, port = address.rpartition(":")
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+        probe.connect((host, int(port)))
+        return str(probe.getsockname()[0])
+
+
 def connect(address: str | None, resources: dict[str, float] | None = None) -> None:
-    """Connect this process to Ray once: to the cluster at `address`, or to a new local Ray."""
+    """Connect this process to Ray once: to the cluster at `address`, or to a new local Ray.
+
+    With a cluster, this machine must be a Ray node (`ray start --address=...`). The
+    driver gives Ray its own address on the route to the head: in the lab, Ray 2.60.1
+    otherwise registered the driver with the head's address, and actors could not reach
+    the driver that owns them.
+    """
     if ray.is_initialized():
         return
     if address is not None:
         check_reachable(address)
-        ray.init(address=address)
+        ray.init(address=address, _node_ip_address=local_ip_towards(address))
     else:
-        ray.init(resources=resources)
+        # "local" starts a new Ray here, even when this machine has joined a cluster.
+        ray.init(address="local", resources=resources)
 
 
 def site_available(site: str) -> bool:
