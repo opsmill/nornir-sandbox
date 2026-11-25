@@ -12,7 +12,8 @@ from nornir.core.task import AggregatedResult
 
 from nornir_sandbox.paths import INVENTORY_DIR, LOG_FILE
 
-RunnerName = Literal["asyncio", "threaded", "serial"]
+RunnerName = Literal["asyncio", "threaded", "serial", "ray"]
+AsyncRunnerName = Literal["asyncio", "ray"]
 
 # Seconds one host may spend on one run before Nornir stops it with TaskTimeoutError.
 PER_HOST_TIMEOUT = 60.0
@@ -60,13 +61,16 @@ async def init_nornir(
     num_workers: int = 10,
     per_host_timeout: float | None = PER_HOST_TIMEOUT,
     timeout: float | None = None,
+    runner: AsyncRunnerName = "asyncio",
 ) -> Nornir:
     """Return a Nornir object for the lab, optionally limited to some host names.
 
     Call it from a coroutine: `nr = await init_nornir(...)`. It uses `AInitNornir`,
     which loads the inventory in a worker thread, so the event loop is not blocked.
 
-    The object uses Nornir's asyncio runner: run coroutine tasks with
+    The object uses Nornir's asyncio runner, or with `runner="ray"` the Ray runner
+    (`nornir_ray`), which runs each host's task on a Ray actor of the host's site; it
+    connects to the cluster in `RAY_ADDRESS`, or starts a local Ray. Run coroutine tasks with
     `await nr.arun(...)`, `await nr.asubmit(...)` or `nr.astream(...)`, and close
     the connections with `async with nr:`.
     `num_workers` is the number of hosts that run a task at the same time.
@@ -79,7 +83,7 @@ async def init_nornir(
     `inventory_dir`. Raises ValueError when a requested host is not in the
     inventory, so a typo does not silently run against nothing.
     """
-    nr = await AInitNornir(**_settings(inventory_dir, "asyncio", num_workers, per_host_timeout, timeout))
+    nr = await AInitNornir(**_settings(inventory_dir, runner, num_workers, per_host_timeout, timeout))
     return _select(nr, hosts)
 
 
@@ -101,6 +105,9 @@ def init_nornir_sync(
       or `nr.stream(...)`. Close the connections with `with nr:`.
     - "serial": runs one host at a time on the caller's thread, with
       `nr.run(...)` or `nr.stream(...)`. It ignores `num_workers`.
+    - "ray": runs each host's task on a Ray actor of the host's site (`data.site`),
+      with `nr.run(...)`, `nr.submit(...)` or `nr.stream(...)`. It connects to the
+      cluster in `RAY_ADDRESS`, or starts a local Ray.
 
     These two runners stop a host at the time limit only at a checkpoint of the
     task: a `yield`, `task.checkpoint()` or the start of a subtask.
@@ -116,6 +123,8 @@ async def close_failed_connections(nr: Nornir, result: AggregatedResult) -> None
     command. Call this before you run another task on the same hosts, so that
     they open a new connection.
     """
-    for name, multi in result.items():
-        if multi.failed:
-            await nr.inventory.hosts[name].aclose_connections()
+    failed = {name for name, multi in result.items() if multi.failed}
+    if failed:
+        # Through the runner, so that a Ray runner closes the connections its actors hold.
+        to_close = nr.filter(filter_func=lambda host: host.name in failed)
+        await to_close.aclose_connections(on_good=True, on_failed=True)

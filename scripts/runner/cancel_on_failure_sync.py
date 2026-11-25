@@ -11,6 +11,12 @@ result of each host, every half second: any thread can read the handle.
 
 The serial runner runs every task on the caller's thread, so it cannot run in the
 background: with --runner serial, nr.submit() raises RunnerCapabilityError.
+
+With --runner ray, each host's task runs on a Ray actor of the host's site (data.site
+in the inventory), on the cluster in RAY_ADDRESS or on a local Ray, and each final line
+names the Ray node that ran it. Cancellation stops a host at its next checkpoint and
+keeps the actor and its connection; a host that passes its deadline in a call to the
+device has its actor stopped, and the next run opens a new connection.
 """
 
 from __future__ import annotations

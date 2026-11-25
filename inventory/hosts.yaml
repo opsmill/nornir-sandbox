@@ -2,11 +2,14 @@
 # hostname is the management address set by `mgmt-ipv4` in that file.
 # data.links lists the lab links seen from this host; scripts/validate uses it
 # to check interfaces and LLDP neighbors.
+# data.site is the site of the host: the Ray runner (runner "ray") runs the host's
+# tasks on a Ray worker that declares the resource of the same name (lab/ray/).
 ---
 ceos1:
   hostname: 172.24.100.11
   groups: [ceos]
   data:
+    site: site_a
     links:
       - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet1}
       - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet2}
@@ -15,6 +18,7 @@ ceos2:
   hostname: 172.24.100.12
   groups: [ceos]
   data:
+    site: site_a
     links:
       - {interface: Ethernet1, peer: ceos1, peer_interface: Ethernet1}
       - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet1}
@@ -23,6 +27,7 @@ ceos3:
   hostname: 172.24.100.13
   groups: [ceos]
   data:
+    site: site_b
     links:
       - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet2}
       - {interface: Ethernet2, peer: ceos1, peer_interface: Ethernet2}

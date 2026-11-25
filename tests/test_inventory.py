@@ -11,9 +11,11 @@ import re
 
 import pytest
 import yaml
+from nornir.core.inventory import Host
 from nornir.core.run import RunOptions
+from nornir.core.task import AggregatedResult, MultiResult, Result, Task
 
-from nornir_sandbox import init_nornir, init_nornir_sync
+from nornir_sandbox import close_failed_connections, init_nornir, init_nornir_sync
 from nornir_sandbox.core import RunnerName
 from nornir_sandbox.paths import REPO_ROOT
 
@@ -72,8 +74,53 @@ def test_sync_init_rejects_unknown_names() -> None:
         init_nornir_sync(hosts=["ceos9"])
 
 
-@pytest.mark.parametrize(("runner", "expected"), [("threaded", "ThreadedRunner"), ("serial", "SerialRunner")])
+@pytest.mark.parametrize(
+    ("runner", "expected"), [("threaded", "ThreadedRunner"), ("serial", "SerialRunner"), ("ray", "RayRunner")]
+)
 def test_sync_init_selects_the_runner_and_its_deadlines(runner: RunnerName, expected: str) -> None:
     nr = init_nornir_sync(runner=runner, per_host_timeout=4, timeout=9)
     assert type(nr.runner).__name__ == expected
     assert getattr(nr.runner, "run_options", None) == RunOptions(per_host_timeout=4, timeout=9)
+
+
+def test_hosts_have_a_site() -> None:
+    hosts = init_nornir_sync().inventory.hosts
+    assert {name: host.data.get("site") for name, host in hosts.items()} == {
+        "ceos1": "site_a",
+        "ceos2": "site_a",
+        "ceos3": "site_b",
+    }
+
+
+def test_async_init_selects_the_ray_runner() -> None:
+    nr = asyncio.run(init_nornir(runner="ray", per_host_timeout=4, timeout=9))
+    assert type(nr.runner).__name__ == "RayRunner"
+    assert getattr(nr.runner, "run_options", None) == RunOptions(per_host_timeout=4, timeout=9)
+
+
+class _RecordingRunner:
+    """Async runner that records the hosts of each run and fails nothing."""
+
+    def __init__(self) -> None:
+        self.runs: list[list[str]] = []
+
+    def run(self, task: Task, hosts: list[Host]) -> AggregatedResult:
+        raise NotImplementedError
+
+    async def arun(self, task: Task, hosts: list[Host]) -> AggregatedResult:
+        self.runs.append(sorted(host.name for host in hosts))
+        return AggregatedResult(task.name)
+
+
+def test_close_failed_connections_runs_through_the_runner() -> None:
+    runner = _RecordingRunner()
+    nr = asyncio.run(init_nornir()).with_runner(runner)
+    result = AggregatedResult("t")
+    for name in ("ceos1", "ceos2", "ceos3"):
+        multi = MultiResult("t")
+        multi.append(Result(nr.inventory.hosts[name], failed=name != "ceos2"))
+        result[name] = multi
+
+    asyncio.run(close_failed_connections(nr, result))
+
+    assert runner.runs == [["ceos1", "ceos3"]]

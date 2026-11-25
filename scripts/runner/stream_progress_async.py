@@ -9,6 +9,11 @@ cancels the hosts that are still running, at the call they are awaiting.
 With --processor, the same task runs with plain `await nr.arun()`, and a processor
 that defines task_instance_progress() prints the partial results instead. The results
 that nr.arun() returns hold the final Result of each host only.
+
+With --runner ray, each host's task runs on a Ray actor of the host's site (data.site
+in the inventory), on the cluster in RAY_ADDRESS or on a local Ray, and each final line
+names the Ray node that ran it. Cancellation and deadlines still stop a host at the call
+it is awaiting, and the actor keeps its connection to the device.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from nornir.core.task import AggregatedResult, MultiResult, PartialResult, Resul
 
 from nornir_sandbox import init_nornir
 from nornir_sandbox.checks import summarize_fact
-from nornir_sandbox.cli import FailHosts, Hosts, SlowHosts, Verbose, format_event, print_summary
+from nornir_sandbox.cli import AsyncRunner, FailHosts, Hosts, SlowHosts, Verbose, format_event, print_summary
 from nornir_sandbox.eos import send, send_json, sleep_command
 
 app = App()
@@ -87,6 +92,7 @@ class PrintProgress:
 @app.default
 async def main(
     *,
+    runner: AsyncRunner = "asyncio",
     hosts: Hosts = None,
     delay: float = 1.0,
     slow_host: SlowHosts = None,
@@ -118,7 +124,7 @@ async def main(
         "slow_delay": slow_delay,
         "fail_hosts": frozenset(fail_host or ()),
     }
-    nr = await init_nornir(hosts=hosts)
+    nr = await init_nornir(hosts=hosts, runner=runner)
     async with nr:
         started_at = time.monotonic()
         if processor:

@@ -57,8 +57,18 @@ FailHosts = Annotated[
     ),
 ]
 SyncRunner = Annotated[
-    Literal["threaded", "serial"],
-    Parameter(help="Nornir runner: threaded runs the hosts in threads, serial one after the other on this thread."),
+    Literal["threaded", "serial", "ray"],
+    Parameter(
+        help="Nornir runner: threaded runs the hosts in threads, serial one after the other on this thread, "
+        "ray on a Ray actor of each host's site (RAY_ADDRESS, or a local Ray)."
+    ),
+]
+AsyncRunner = Annotated[
+    Literal["asyncio", "ray"],
+    Parameter(
+        help="Nornir runner: asyncio runs the hosts on this event loop, "
+        "ray on a Ray actor of each host's site (RAY_ADDRESS, or a local Ray)."
+    ),
 ]
 
 
@@ -76,14 +86,20 @@ def describe_result(result: Result) -> str:
 
 
 def format_event(event: PartialResult | Result, started_at: float) -> str:
-    """Return one line for an event of a run: seconds since `started_at` (time.monotonic()), host, event."""
+    """Return one line for an event of a run: seconds since `started_at` (time.monotonic()), host, event.
+
+    A final result from the Ray runner ends with the node that ran it.
+    """
     elapsed = time.monotonic() - started_at
     host = event.host.name if event.host is not None else "-"
     if isinstance(event, PartialResult):
         progress = "    " if event.progress is None else f"{event.progress:4.0%}"
         return f"{elapsed:6.2f}s  {host:<6} progress {progress}  {event.result}"
     status = "FAILED  " if event.failed else "finished"
-    return f"{elapsed:6.2f}s  {host:<6} {status}       {describe_result(event)}"
+    line = f"{elapsed:6.2f}s  {host:<6} {status}       {describe_result(event)}"
+    # The Ray runner records the node that ran the host on its final result.
+    node = getattr(event, "ray_node", None)
+    return f"{line}  [node {node}]" if node else line
 
 
 def print_summary(results: Iterable[AggregatedResult], verbose: bool = False) -> int:

@@ -9,6 +9,11 @@ not started never start.
 
 --watch starts a second asyncio task that prints handle.progress(), the latest partial
 result of each host, every half second.
+
+With --runner ray, each host's task runs on a Ray actor of the host's site (data.site
+in the inventory), on the cluster in RAY_ADDRESS or on a local Ray, and each final line
+names the Ray node that ran it. Cancellation and deadlines still stop a host at the call
+it is awaiting, and the actor keeps its connection to the device.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from nornir.core.task import PartialResult, Result, Task
 
 from nornir_sandbox import init_nornir
 from nornir_sandbox.checks import summarize_fact
-from nornir_sandbox.cli import FailHosts, Hosts, SlowHosts, Verbose, format_event, print_summary
+from nornir_sandbox.cli import AsyncRunner, FailHosts, Hosts, SlowHosts, Verbose, format_event, print_summary
 from nornir_sandbox.eos import send, send_json, sleep_command
 
 app = App()
@@ -71,6 +76,7 @@ async def watch_progress(handle: AsyncRunHandle, started_at: float) -> None:
 @app.default
 async def main(
     *,
+    runner: AsyncRunner = "asyncio",
     hosts: Hosts = None,
     workers: int = 10,
     delay: float = 1.0,
@@ -99,7 +105,7 @@ async def main(
     watch
         Print handle.progress() every half second from another asyncio task.
     """
-    nr = await init_nornir(hosts=hosts, num_workers=workers)
+    nr = await init_nornir(hosts=hosts, num_workers=workers, runner=runner)
     async with nr:
         started_at = time.monotonic()
         handle = await nr.asubmit(
