@@ -100,6 +100,7 @@ async def main(
     fail_host: FailHosts = None,
     break_after: int | None = None,
     processor: bool = False,
+    repeat: int = 1,
     verbose: Verbose = False,
 ) -> int:
     """Run a fact-collection task that reports progress, and print each event as it arrives.
@@ -117,6 +118,9 @@ async def main(
     processor
         Run with nr.arun() and print the partial results from a processor, instead of
         iterating over nr.astream().
+    repeat
+        Run the task this many times on the same Nornir object. With --runner ray,
+        later runs reuse each host's actor and its connection.
     """
     task_args: dict[str, Any] = {
         "delay": delay,
@@ -126,29 +130,34 @@ async def main(
     }
     nr = await init_nornir(hosts=hosts, runner=runner)
     async with nr:
-        started_at = time.monotonic()
-        if processor:
-            result = await nr.with_processors([PrintProgress(started_at)]).arun(task=collect_facts, **task_args)
-            print("\nnr.arun() returned. Types stored for each host:")
-            for host, multi in result.items():
-                print(f"  {host}: {[type(item).__name__ for item in multi]}")
-        else:
-            # `async with` cancels the run on exit if it has not finished. Leaving the
-            # `async for` loop early cancels it too, when the loop's iterator is dropped.
-            async with nr.astream(task=collect_facts, **task_args) as stream:
-                print(f"astream() returned an {type(stream).__name__}; the run starts on the event loop")
-                print(f"{'elapsed':>7}  {'host':<6} event\n")
-                count = 0
-                async for event in stream:
-                    count += 1
-                    print(format_event(event, started_at))
-                    if break_after is not None and count >= break_after:
-                        print(f"\nLeaving the loop after {count} events: the run is cancelled.")
-                        break
-            result = await stream.result()
-            print(f"\nstream.result() returned after {time.monotonic() - started_at:.2f}s")
+        results = []
+        for run_number in range(1, repeat + 1):
+            if repeat > 1:
+                print(f"\n--- run {run_number} of {repeat}")
+            started_at = time.monotonic()
+            if processor:
+                result = await nr.with_processors([PrintProgress(started_at)]).arun(task=collect_facts, **task_args)
+                print("\nnr.arun() returned. Types stored for each host:")
+                for host, multi in result.items():
+                    print(f"  {host}: {[type(item).__name__ for item in multi]}")
+            else:
+                # `async with` cancels the run on exit if it has not finished. Leaving the
+                # `async for` loop early cancels it too, when the loop's iterator is dropped.
+                async with nr.astream(task=collect_facts, **task_args) as stream:
+                    print(f"astream() returned an {type(stream).__name__}; the run starts on the event loop")
+                    print(f"{'elapsed':>7}  {'host':<6} event\n")
+                    count = 0
+                    async for event in stream:
+                        count += 1
+                        print(format_event(event, started_at))
+                        if break_after is not None and count >= break_after:
+                            print(f"\nLeaving the loop after {count} events: the run is cancelled.")
+                            break
+                result = await stream.result()
+                print(f"\nstream.result() returned after {time.monotonic() - started_at:.2f}s")
+            results.append(result)
     print()
-    return print_summary([result], verbose)
+    return print_summary(results, verbose)
 
 
 if __name__ == "__main__":
