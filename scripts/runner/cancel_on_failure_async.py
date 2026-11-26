@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncGenerator, Collection
+from typing import Any
 
 from cyclopts import App
 from nornir.core.run import AsyncRunHandle
@@ -35,7 +36,7 @@ REJECTED_COMMAND = "show interfaces Ethernet99"
 
 async def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float, fail_hosts: Collection[str]
-) -> AsyncGenerator[PartialResult | Result, None]:
+) -> AsyncGenerator[PartialResult | Result[str], None]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     An async generator cannot `return` a value, so the task ends by yielding its
@@ -57,7 +58,7 @@ async def collect_facts(
     yield Result(host=task.host, result=", ".join(facts))
 
 
-async def watch_progress(handle: AsyncRunHandle, started_at: float) -> None:
+async def watch_progress(handle: AsyncRunHandle[Any], started_at: float) -> None:
     """Print the latest partial result of each host every half second, until the run is done."""
     while not handle.done:
         snapshot = ", ".join(

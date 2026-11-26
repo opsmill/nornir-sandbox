@@ -43,7 +43,7 @@ STOPPED_AT: dict[str, float] = {}
 
 async def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float
-) -> AsyncGenerator[PartialResult | Result, None]:
+) -> AsyncGenerator[PartialResult | Result[str], None]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     An async generator cannot `return` a value, so the task ends by yielding its

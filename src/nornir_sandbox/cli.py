@@ -100,7 +100,7 @@ def format_interfaces(host: str, result: Interfaces) -> str:
     return "\n".join(lines) or f"{host:<8} (no interface)"
 
 
-def describe_result(result: Result) -> str:
+def describe_result(result: Result[Any]) -> str:
     """Return the exception type and message of a failed result, or the result value.
 
     For a cancelled or timed-out host, also say whether its task had started.
@@ -113,7 +113,7 @@ def describe_result(result: Result) -> str:
     return message
 
 
-def format_event(event: PartialResult | Result, started_at: float) -> str:
+def format_event(event: PartialResult | Result[Any], started_at: float) -> str:
     """Return one line for an event of a run: seconds since `started_at` (time.monotonic()), host, event."""
     elapsed = time.monotonic() - started_at
     host = event.host.name if event.host is not None else "-"
@@ -124,7 +124,7 @@ def format_event(event: PartialResult | Result, started_at: float) -> str:
     return f"{elapsed:6.2f}s  {host:<6} {status}       {describe_result(event)}"
 
 
-def print_summary(results: Iterable[AggregatedResult], verbose: bool = False) -> int:
+def print_summary(results: Iterable[AggregatedResult[Any]], verbose: bool = False) -> int:
     """Print one line per host and task. Return 1 if any task failed, else 0."""
     failed = False
     for aggregated in results:

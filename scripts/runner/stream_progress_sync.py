@@ -36,7 +36,7 @@ REJECTED_COMMAND = "show interfaces Ethernet99"
 
 def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float, fail_hosts: Collection[str]
-) -> Generator[PartialResult, None, Result]:
+) -> Generator[PartialResult, None, Result[str]]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     Each `yield` is a checkpoint: a cancelled host stops there. The wait on the device
@@ -68,19 +68,19 @@ class PrintProgress:
     def task_started(self, task: Task) -> None:
         pass
 
-    def task_completed(self, task: Task, result: AggregatedResult) -> None:
+    def task_completed(self, task: Task, result: AggregatedResult[Any]) -> None:
         pass
 
     def task_instance_started(self, task: Task, host: Host) -> None:
         pass
 
-    def task_instance_completed(self, task: Task, host: Host, result: MultiResult) -> None:
+    def task_instance_completed(self, task: Task, host: Host, result: MultiResult[Any]) -> None:
         print(f"{format_event(result[0], self.started_at)}  [{threading.current_thread().name}]")
 
     def subtask_instance_started(self, task: Task, host: Host) -> None:
         pass
 
-    def subtask_instance_completed(self, task: Task, host: Host, result: MultiResult) -> None:
+    def subtask_instance_completed(self, task: Task, host: Host, result: MultiResult[Any]) -> None:
         pass
 
 

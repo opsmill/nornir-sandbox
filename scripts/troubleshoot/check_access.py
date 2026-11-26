@@ -12,7 +12,7 @@ from nornir_sandbox.cli import Hosts, Verbose, print_summary
 app = App()
 
 
-async def check_access(task: Task, port: int = 22, timeout: float = 3.0) -> Result:
+async def check_access(task: Task, port: int = 22, timeout: float = 3.0) -> Result[str]:
     """Check, in order, that the SSH port answers and that login reaches the device CLI.
 
     The login step opens the scrapli connection and reads the prompt, so it works on

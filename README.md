@@ -426,7 +426,11 @@ still accepts the Nornir version, and run `uv lock`.
   several scripts use it. Use `await send()` or `await send_json()` from
   `nornir_sandbox.eos` to run commands on EOS; they raise `EOSCommandError` when
   EOS rejects a command. Put logic that does not need a device in a plain
-  function, as in `checks.py`, so it can be unit tested.
+  function, as in `checks.py`, so it can be unit tested. Annotate the task's
+  return type with the type of its result, for example `-> Result[str]`:
+  `await nr.arun(...)` then returns an `AggregatedResult[str]`, and mypy checks
+  the code that reads `result[host].result`. Nornir cannot infer the type of a
+  generator task, so its results are typed `Any`.
 - A new Operation: define its models, as dataclasses or Pydantic models, and its
   class in `src/nornir_sandbox/operations/contracts.py`, write an `async def` and a `def`
   task in `operations/eos.py` and `operations/srlinux.py`, put the parsing of

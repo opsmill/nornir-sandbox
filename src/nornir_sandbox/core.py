@@ -136,7 +136,7 @@ def init_nornir_sync(
     return _select(nr, hosts, platform)
 
 
-async def close_failed_connections(nr: Nornir, result: AggregatedResult) -> None:
+async def close_failed_connections(nr: Nornir, result: AggregatedResult[Any]) -> None:
     """Close the connections of the hosts that failed in `result`.
 
     Nornir does not close the connection of a host that it stopped at the time

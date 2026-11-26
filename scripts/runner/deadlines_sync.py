@@ -49,7 +49,7 @@ STOPPED_AT: dict[str, float] = {}
 
 def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float, wait_step: float | None
-) -> Generator[PartialResult, None, Result]:
+) -> Generator[PartialResult, None, Result[str]]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     Each `yield` and each task.checkpoint() is a checkpoint: a timed-out host stops

@@ -51,6 +51,9 @@ uv run invoke test
   pair.
 - A Nornir task lives in the script that uses it, above `main()`. Move it to
   the package only when several scripts use it.
+- Annotate a task's return type with the type of its result (`-> Result[str]`),
+  so `nr.arun()` returns a typed `AggregatedResult`. Code that accepts the
+  results of any task uses `Result[Any]` or `AggregatedResult[Any]`.
 - Device access goes through the scrapli connection (`eos.py`, `srlinux.py`).
   Parse EOS output with `| json` and SR Linux output with `| as json`, not text
   parsing.
