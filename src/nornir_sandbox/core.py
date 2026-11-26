@@ -10,12 +10,21 @@ from nornir import AInitNornir, InitNornir
 from nornir.core import Nornir
 from nornir.core.task import AggregatedResult
 
+from nornir_sandbox.operations.contracts import ASYNC_CONNECTION, SYNC_CONNECTION
 from nornir_sandbox.paths import INVENTORY_DIR, LOG_FILE
 
 RunnerName = Literal["asyncio", "threaded", "serial"]
 
 # Seconds one host may spend on one run before Nornir stops it with TaskTimeoutError.
 PER_HOST_TIMEOUT = 60.0
+
+# The asyncio runner runs the `async def` tasks of an Operation, the other runners the
+# `def` tasks; each form is registered under its own connection name.
+OPERATION_CONNECTION: dict[RunnerName, str] = {
+    "asyncio": ASYNC_CONNECTION,
+    "threaded": SYNC_CONNECTION,
+    "serial": SYNC_CONNECTION,
+}
 
 
 def _settings(
@@ -40,18 +49,26 @@ def _settings(
             },
         },
         "logging": {"log_file": str(LOG_FILE)},
+        "core": {"operation_connection": OPERATION_CONNECTION[runner]},
     }
 
 
-def _select(nr: Nornir, hosts: Sequence[str] | None) -> Nornir:
-    if not hosts:
-        return nr
-    unknown = sorted(set(hosts) - set(nr.inventory.hosts))
-    if unknown:
-        known = ", ".join(sorted(nr.inventory.hosts))
-        raise ValueError(f"unknown host(s): {', '.join(unknown)}; inventory hosts are: {known}")
-    wanted = set(hosts)
-    return nr.filter(filter_func=lambda host: host.name in wanted)
+def _select(nr: Nornir, hosts: Sequence[str] | None, platform: str | None) -> Nornir:
+    if hosts:
+        unknown = sorted(set(hosts) - set(nr.inventory.hosts))
+        if unknown:
+            known = ", ".join(sorted(nr.inventory.hosts))
+            raise ValueError(f"unknown host(s): {', '.join(unknown)}; inventory hosts are: {known}")
+        wanted = set(hosts)
+        nr = nr.filter(filter_func=lambda host: host.name in wanted)
+    if platform:
+        other = sorted(name for name, host in nr.inventory.hosts.items() if host.platform != platform)
+        if hosts and other:
+            raise ValueError(
+                f"host(s) {', '.join(other)} are not {platform} hosts; this script supports only {platform}"
+            )
+        nr = nr.filter(platform=platform)
+    return nr
 
 
 async def init_nornir(
@@ -60,8 +77,10 @@ async def init_nornir(
     num_workers: int = 10,
     per_host_timeout: float | None = PER_HOST_TIMEOUT,
     timeout: float | None = None,
+    platform: str | None = None,
 ) -> Nornir:
-    """Return a Nornir object for the lab, optionally limited to some host names.
+    """Return a Nornir object for the lab, optionally limited to some host names or to
+    one platform.
 
     Call it from a coroutine: `nr = await init_nornir(...)`. It uses `AInitNornir`,
     which loads the inventory in a worker thread, so the event loop is not blocked.
@@ -75,12 +94,18 @@ async def init_nornir(
     the other hosts are not affected. `timeout` is the number of seconds the
     whole run may take. None removes a limit.
 
+    `core.operation_connection` is set for the runner, so `arun_operation()`
+    selects the `async def` task of each Operation without a `connection=` argument.
+
+    `platform` keeps only the hosts of that platform, for scripts that send commands
+    of one network operating system; see `nornir_sandbox.eos.PLATFORM`.
+
     The inventory is read from hosts.yaml, groups.yaml and defaults.yaml in
     `inventory_dir`. Raises ValueError when a requested host is not in the
-    inventory, so a typo does not silently run against nothing.
+    inventory, or not of `platform`, so a typo does not silently run against nothing.
     """
     nr = await AInitNornir(**_settings(inventory_dir, "asyncio", num_workers, per_host_timeout, timeout))
-    return _select(nr, hosts)
+    return _select(nr, hosts, platform)
 
 
 def init_nornir_sync(
@@ -90,6 +115,7 @@ def init_nornir_sync(
     runner: RunnerName = "asyncio",
     per_host_timeout: float | None = PER_HOST_TIMEOUT,
     timeout: float | None = None,
+    platform: str | None = None,
 ) -> Nornir:
     """Same as `init_nornir()`, for code that does not run on an event loop.
 
@@ -103,9 +129,11 @@ def init_nornir_sync(
       `nr.run(...)` or `nr.stream(...)`. It ignores `num_workers`.
 
     These two runners stop a host at the time limit only at a checkpoint of the
-    task: a `yield`, `task.checkpoint()` or the start of a subtask.
+    task: a `yield`, `task.checkpoint()` or the start of a subtask. With them,
+    `run_operation()` selects the `def` (`_sync`) task of each Operation.
     """
-    return _select(InitNornir(**_settings(inventory_dir, runner, num_workers, per_host_timeout, timeout)), hosts)
+    nr = InitNornir(**_settings(inventory_dir, runner, num_workers, per_host_timeout, timeout))
+    return _select(nr, hosts, platform)
 
 
 async def close_failed_connections(nr: Nornir, result: AggregatedResult) -> None:

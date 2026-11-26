@@ -24,8 +24,8 @@ from nornir.core.task import AggregatedResult, MultiResult, PartialResult, Resul
 
 from nornir_sandbox import init_nornir_sync
 from nornir_sandbox.checks import summarize_fact
-from nornir_sandbox.cli import FailHosts, Hosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
-from nornir_sandbox.eos import send_json_sync, send_sync, sleep_command
+from nornir_sandbox.cli import EosHosts, FailHosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
+from nornir_sandbox.eos import PLATFORM, send_json_sync, send_sync, sleep_command
 
 app = App()
 
@@ -87,7 +87,7 @@ class PrintProgress:
 @app.default
 def main(
     *,
-    hosts: Hosts = None,
+    hosts: EosHosts = None,
     runner: SyncRunner = "threaded",
     delay: float = 1.0,
     slow_host: SlowHosts = None,
@@ -119,7 +119,7 @@ def main(
         "slow_delay": slow_delay,
         "fail_hosts": frozenset(fail_host or ()),
     }
-    with init_nornir_sync(hosts=hosts, runner=runner) as nr:
+    with init_nornir_sync(hosts=hosts, platform=PLATFORM, runner=runner) as nr:
         started_at = time.monotonic()
         if processor:
             result = nr.with_processors([PrintProgress(started_at)]).run(task=collect_facts, **task_args)
