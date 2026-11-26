@@ -125,8 +125,8 @@ runner, `async def` tasks), so you can compare them.
 
 | Script                     | Nornir calls                                                             |
 |----------------------------|--------------------------------------------------------------------------|
-| `stream_progress_sync.py`  | `nr.stream()`; with `--processor`, `nr.run()` and `task_instance_progress` |
-| `stream_progress_async.py` | `nr.astream()`; with `--processor`, `await nr.arun()` and `task_instance_progress` |
+| `stream_progress_sync.py`  | `nr.stream()`; with `--final-only`, `stream.results()`; with `--processor`, `nr.run()` and `task_instance_progress` |
+| `stream_progress_async.py` | `nr.astream()`; with `--final-only`, `stream.results()`; with `--processor`, `await nr.arun()` and `task_instance_progress` |
 | `cancel_on_failure_sync.py`  | `nr.submit()`, `handle.results()`, `handle.progress()`, `handle.cancel()` |
 | `cancel_on_failure_async.py` | `await nr.asubmit()`, the same handle methods                          |
 | `deadlines_sync.py`        | `per_host_timeout` and `timeout` on the runner, or `RunOptions` for one run |
@@ -151,6 +151,8 @@ Examples:
 uv run python scripts/runner/stream_progress_sync.py --slow-host ceos3 --fail-host ceos2
 uv run python scripts/runner/stream_progress_async.py --break-after 4 --delay 2
 uv run python scripts/runner/stream_progress_sync.py --runner serial --break-after 5
+# Only the final result of each host, from stream.results()
+uv run python scripts/runner/stream_progress_async.py --final-only --slow-host ceos3
 
 # Cancel the run when ceos2 fails; print handle.progress() every half second
 uv run python scripts/runner/cancel_on_failure_sync.py --fail-host ceos2 --slow-host ceos3 --watch

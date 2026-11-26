@@ -4,7 +4,8 @@ The task (collect_facts, below) is a generator: it yields a
 PartialResult before and after each show command, and returns its final Result.
 nr.stream() yields those partial results and the final Result of each host as they
 happen. Leaving the loop early (--break-after) cancels the hosts that are still
-running.
+running. With --final-only, the loop iterates over stream.results() instead, which
+yields only the final Result of each host.
 
 With --processor, the same task runs with plain nr.run(), and a processor that
 defines task_instance_progress() prints the partial results instead. The results that
@@ -94,6 +95,7 @@ def main(
     slow_delay: float = 3.0,
     fail_host: FailHosts = None,
     break_after: int | None = None,
+    final_only: bool = False,
     processor: bool = False,
     verbose: Verbose = False,
 ) -> int:
@@ -109,6 +111,9 @@ def main(
         Seconds a --slow-host waits on the device before each command.
     break_after
         Leave the loop after this many events, which cancels the run.
+    final_only
+        Iterate over stream.results(), which skips the partial results and yields the
+        final Result of each host.
     processor
         Run with nr.run() and print the partial results from a processor, instead of
         iterating over nr.stream().
@@ -130,7 +135,8 @@ def main(
             stream = nr.stream(task=collect_facts, **task_args)
             print(f"nr.stream() returned a {type(stream).__name__}; the {runner} runner runs the hosts")
             print(f"{'elapsed':>7}  {'host':<6} event\n")
-            for count, event in enumerate(stream, start=1):
+            events = stream.results() if final_only else stream
+            for count, event in enumerate(events, start=1):
                 print(format_event(event, started_at))
                 if break_after is not None and count >= break_after:
                     print(f"\nLeaving the loop after {count} events: the run is cancelled.")
