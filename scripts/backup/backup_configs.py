@@ -14,7 +14,7 @@ from nornir_sandbox.eos import PLATFORM, send
 app = App()
 
 
-async def backup_config(task: Task, backup_dir: Path) -> Result:
+async def backup_config(task: Task, backup_dir: Path) -> Result[str]:
     """Save the running configuration to <backup_dir>/<host>.cfg."""
     config = await send(task, "show running-config")
     path = backup_dir / f"{task.host.name}.cfg"

@@ -6,9 +6,6 @@ resolution-markers = [
     "python_full_version < '3.15'",
 ]
 
-[manifest]
-overrides = [{ name = "nornir", git = "https://github.com/nornir-automation/nornir?rev=0a17a4f62cff4e9485f5be5ef77e92b662ccf078" }]
-
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -662,10 +659,14 @@ wheels = [
 
 [[package]]
 name = "nornir"
-version = "3.6.1"
-source = { git = "https://github.com/nornir-automation/nornir?rev=0a17a4f62cff4e9485f5be5ef77e92b662ccf078#0a17a4f62cff4e9485f5be5ef77e92b662ccf078" }
+version = "3.7.0b1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/64/197a734acf9260ed8dfb21e2fd2ee68adda141883d920385b155dc528076/nornir-3.7.0b1.tar.gz", hash = "sha256:bdcafc59421413cee96a130edd06212847c978e379c42754122402760904e9ba", size = 75574, upload-time = "2026-11-26T07:15:52.805Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/7c/6f8763d947c38c6d40d24c0774c07b95a560a1f504658f4dd794938b5552/nornir-3.7.0b1-py3-none-any.whl", hash = "sha256:c7d735d51ca297911e43b411e60de37867f18ec72bacbbf1585b0a9a4f2bfee1", size = 79807, upload-time = "2026-11-26T07:15:51.587Z" },
 ]
 
 [[package]]
@@ -694,7 +695,7 @@ dev = [
 requires-dist = [
     { name = "cyclopts", specifier = ">=5.2.0" },
     { name = "invoke", specifier = ">=2.2" },
-    { name = "nornir", git = "https://github.com/nornir-automation/nornir?rev=0a17a4f62cff4e9485f5be5ef77e92b662ccf078" },
+    { name = "nornir", specifier = "==3.7.0b1" },
     { name = "nornir-scrapli", extras = ["asyncio"], specifier = "==1.6.0a1" },
     { name = "nornir-utils", specifier = ">=0.2" },
     { name = "pydantic", specifier = ">=2.7" },

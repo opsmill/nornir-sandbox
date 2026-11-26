@@ -18,6 +18,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Collection, Generator
+from typing import Any
 
 from cyclopts import App
 from nornir.core.exceptions import RunnerCapabilityError
@@ -38,7 +39,7 @@ REJECTED_COMMAND = "show interfaces Ethernet99"
 
 def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float, fail_hosts: Collection[str]
-) -> Generator[PartialResult, None, Result]:
+) -> Generator[PartialResult, None, Result[str]]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     Each `yield` is a checkpoint: after handle.cancel(), a running host stops at its
@@ -59,7 +60,7 @@ def collect_facts(
     return Result(host=task.host, result=", ".join(facts))
 
 
-def watch_progress(handle: RunHandle, started_at: float) -> None:
+def watch_progress(handle: RunHandle[Any], started_at: float) -> None:
     """Print the latest partial result of each host every half second, until the run is done."""
     while not handle.done:
         snapshot = ", ".join(

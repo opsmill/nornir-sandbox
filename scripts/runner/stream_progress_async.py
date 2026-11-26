@@ -4,7 +4,9 @@ The task (collect_facts, below) is an async generator: it
 yields a PartialResult before and after each show command, and ends by yielding its
 final Result. `async for event in nr.astream(...)` receives those partial results and
 the final Result of each host as they happen. Leaving the loop early (--break-after)
-cancels the hosts that are still running, at the call they are awaiting.
+cancels the hosts that are still running, at the call they are awaiting. With
+--final-only, the loop iterates over stream.results() instead, which yields only the
+final Result of each host.
 
 With --processor, the same task runs with plain `await nr.arun()`, and a processor
 that defines task_instance_progress() prints the partial results instead. The results
@@ -35,7 +37,7 @@ REJECTED_COMMAND = "show interfaces Ethernet99"
 
 async def collect_facts(
     task: Task, delay: float, slow_hosts: Collection[str], slow_delay: float, fail_hosts: Collection[str]
-) -> AsyncGenerator[PartialResult | Result, None]:
+) -> AsyncGenerator[PartialResult | Result[str], None]:
     """Run COMMANDS one by one, and yield a PartialResult before and after each.
 
     An async generator cannot `return` a value, so the task ends by yielding its
@@ -68,19 +70,19 @@ class PrintProgress:
     def task_started(self, task: Task) -> None:
         pass
 
-    def task_completed(self, task: Task, result: AggregatedResult) -> None:
+    def task_completed(self, task: Task, result: AggregatedResult[Any]) -> None:
         pass
 
     def task_instance_started(self, task: Task, host: Host) -> None:
         pass
 
-    def task_instance_completed(self, task: Task, host: Host, result: MultiResult) -> None:
+    def task_instance_completed(self, task: Task, host: Host, result: MultiResult[Any]) -> None:
         print(format_event(result[0], self.started_at))
 
     def subtask_instance_started(self, task: Task, host: Host) -> None:
         pass
 
-    def subtask_instance_completed(self, task: Task, host: Host, result: MultiResult) -> None:
+    def subtask_instance_completed(self, task: Task, host: Host, result: MultiResult[Any]) -> None:
         pass
 
 
@@ -93,6 +95,7 @@ async def main(
     slow_delay: float = 3.0,
     fail_host: FailHosts = None,
     break_after: int | None = None,
+    final_only: bool = False,
     processor: bool = False,
     verbose: Verbose = False,
 ) -> int:
@@ -108,6 +111,9 @@ async def main(
         Seconds a --slow-host waits on the device before each command.
     break_after
         Leave the loop after this many events, which cancels the run.
+    final_only
+        Iterate over stream.results(), which skips the partial results and yields the
+        final Result of each host.
     processor
         Run with nr.arun() and print the partial results from a processor, instead of
         iterating over nr.astream().
@@ -133,7 +139,8 @@ async def main(
                 print(f"astream() returned an {type(stream).__name__}; the run starts on the event loop")
                 print(f"{'elapsed':>7}  {'host':<6} event\n")
                 count = 0
-                async for event in stream:
+                events = stream.results() if final_only else stream
+                async for event in events:
                     count += 1
                     print(format_event(event, started_at))
                     if break_after is not None and count >= break_after:

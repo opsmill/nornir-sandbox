@@ -51,6 +51,9 @@ uv run invoke test
   pair.
 - A Nornir task lives in the script that uses it, above `main()`. Move it to
   the package only when several scripts use it.
+- Annotate a task's return type with the type of its result (`-> Result[str]`),
+  so `nr.arun()` returns a typed `AggregatedResult`. Code that accepts the
+  results of any task uses `Result[Any]` or `AggregatedResult[Any]`.
 - Device access goes through the scrapli connection (`eos.py`, `srlinux.py`).
   Parse EOS output with `| json` and SR Linux output with `| as json`, not text
   parsing.
@@ -73,12 +76,9 @@ uv run invoke test
 - `lab/sandbox.clab.yml`, `lab/configs/`, `inventory/hosts.yaml` and
   `inventory/groups.yaml` describe srl1 too; SR Linux interface names are
   `ethernet-1/N` in the inventory and `e1-N` in the topology.
-- nornir-scrapli (1.6.0a1) is a PyPI pre-release pinned with `==` in
-  `pyproject.toml`. nornir comes from a Git commit of the Operations branch
-  (`dga/feat-operation-s0e5v`) pinned in `[tool.uv.sources]`; that commit
-  reports version 3.6.1, so `[tool.uv] override-dependencies` repeats it to
-  satisfy nornir-scrapli's `nornir>=3.7.0a1`. Change the nornir revision in
-  both places.
+- nornir (3.7.0b1) and nornir-scrapli (1.6.0a1) are PyPI pre-releases pinned
+  with `==` in `pyproject.toml`. When a new pre-release of either comes out,
+  update its pin and check that nornir-scrapli still accepts the Nornir version.
 - `init_nornir()` is a coroutine (`AInitNornir`). Outside the event loop, use
   `init_nornir_sync()`.
 - The runner stops a host after `per_host_timeout` seconds and does not close
