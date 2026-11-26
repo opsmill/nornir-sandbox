@@ -8,8 +8,8 @@ requires-python = ">=3.11"
 dependencies = [
     "cyclopts>=5.2.0",
     "invoke>=2.2",
-    "nornir>=3.5",
-    "nornir-scrapli>=2025.1.30",
+    "nornir==3.7.0a1",
+    "nornir-scrapli[asyncio]==1.6.0a1",
     "nornir-utils>=0.2",
 ]
 
