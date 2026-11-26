@@ -25,7 +25,7 @@ mgmt:
 topology:
   kinds:
     ceos:
-      image: registry.opsmill.io/external/ceos-image:4.29.0.2F
+      image: null
     nokia_srlinux:
       image: ghcr.io/nokia/srlinux:24.10.1
 

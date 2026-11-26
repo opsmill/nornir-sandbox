@@ -30,8 +30,7 @@ Login, SSH on the management address: `admin` / `admin` on the cEOS devices,
 
 - Docker, and containerlab. Your user must be in the `clab_admins` group, or
   set `CONTAINERLAB="sudo containerlab"`.
-- The cEOS image `registry.opsmill.io/external/ceos-image:4.29.0.2F`. To use
-  another image, change `topology.kinds.ceos.image` in `lab/sandbox.clab.yml`.
+- The Arista cEOS image. Arista requires registration before you get access to the cEOS image. Once you have access to the image, specify the name of the image in the `./lab/sandbox.clab.yml` containerlab topology file.
 - The SR Linux image `ghcr.io/nokia/srlinux:24.10.1`, public on GitHub
   Container Registry (`topology.kinds.nokia_srlinux.image`).
 - [uv](https://docs.astral.sh/uv/). `uv sync` installs Nornir from a Git commit,
