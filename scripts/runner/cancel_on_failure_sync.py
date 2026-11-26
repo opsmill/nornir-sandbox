@@ -26,8 +26,8 @@ from nornir.core.task import PartialResult, Result, Task
 
 from nornir_sandbox import init_nornir_sync
 from nornir_sandbox.checks import summarize_fact
-from nornir_sandbox.cli import FailHosts, Hosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
-from nornir_sandbox.eos import send_json_sync, send_sync, sleep_command
+from nornir_sandbox.cli import EosHosts, FailHosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
+from nornir_sandbox.eos import PLATFORM, send_json_sync, send_sync, sleep_command
 
 app = App()
 
@@ -73,7 +73,7 @@ def watch_progress(handle: RunHandle, started_at: float) -> None:
 @app.default
 def main(
     *,
-    hosts: Hosts = None,
+    hosts: EosHosts = None,
     runner: SyncRunner = "threaded",
     workers: int = 10,
     delay: float = 1.0,
@@ -102,7 +102,7 @@ def main(
     watch
         Print handle.progress() every half second from another thread.
     """
-    with init_nornir_sync(hosts=hosts, runner=runner, num_workers=workers) as nr:
+    with init_nornir_sync(hosts=hosts, platform=PLATFORM, runner=runner, num_workers=workers) as nr:
         started_at = time.monotonic()
         try:
             handle = nr.submit(

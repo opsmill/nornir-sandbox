@@ -22,6 +22,19 @@ class Link:
     peer_interface: str
 
 
+@dataclass(frozen=True)
+class LldpNeighbor:
+    """One LLDP neighbor seen by the local host: local interface, neighbor system name and port."""
+
+    interface: str
+    peer: str
+    peer_interface: str
+
+
+# Every lab node shares the management network, so neighbors seen there are ignored.
+MANAGEMENT_INTERFACES = ("Management", "mgmt")
+
+
 def _short_name(device: str) -> str:
     """LLDP reports the system name, which may include a domain (ceos2.lab.local)."""
     return device.split(".", 1)[0]
@@ -31,17 +44,32 @@ def compare_lldp(expected: Iterable[Link], neighbors: Iterable[Mapping[str, Any]
     """Check LLDP neighbors against the expected links.
 
     `neighbors` is the `lldpNeighbors` list from EOS `show lldp neighbors | json`:
-    entries with `port`, `neighborDevice` and `neighborPort`. Neighbors seen on
-    management interfaces are ignored, because every lab node shares the
-    management network.
+    entries with `port`, `neighborDevice` and `neighborPort`.
+    """
+    return compare_neighbors(
+        expected,
+        (
+            LldpNeighbor(
+                interface=str(entry.get("port", "")),
+                peer=str(entry.get("neighborDevice", "")),
+                peer_interface=str(entry.get("neighborPort", "")),
+            )
+            for entry in neighbors
+        ),
+    )
+
+
+def compare_neighbors(expected: Iterable[Link], neighbors: Iterable[LldpNeighbor]) -> list[str]:
+    """Check LLDP neighbors of any platform against the expected links.
+
+    Neighbors seen on management interfaces are ignored, because every lab node
+    shares the management network.
     """
     seen: dict[str, set[tuple[str, str]]] = {}
-    for entry in neighbors:
-        port = str(entry.get("port", ""))
-        if port.startswith("Management"):
+    for neighbor in neighbors:
+        if neighbor.interface.startswith(MANAGEMENT_INTERFACES):
             continue
-        peer = (_short_name(str(entry.get("neighborDevice", ""))), str(entry.get("neighborPort", "")))
-        seen.setdefault(port, set()).add(peer)
+        seen.setdefault(neighbor.interface, set()).add((_short_name(neighbor.peer), neighbor.peer_interface))
 
     problems: list[str] = []
     expected_ports: set[str] = set()
@@ -92,3 +120,21 @@ def summarize_fact(command: str, data: Mapping[str, Any]) -> str:
     if command == "show lldp neighbors":
         return f"{len(data['lldpNeighbors'])} LLDP neighbors"
     raise ValueError(f"no summary for {command!r}")
+
+
+def links_from(data: Iterable[Mapping[str, str]]) -> list[Link]:
+    """Return the links of a host from its `data.links` entries in inventory/hosts.yaml."""
+    return [Link(**entry) for entry in data]
+
+
+DESCRIPTION_TEMPLATE = "to {peer} {peer_interface}"
+"""Description of the link interfaces in the lab startup configurations."""
+
+
+def link_descriptions(links: Iterable[Link], template: str = DESCRIPTION_TEMPLATE) -> dict[str, str]:
+    """Return the description of each link interface, built from `template` with the
+    fields of Link: {interface}, {peer} and {peer_interface}."""
+    return {
+        link.interface: template.format(interface=link.interface, peer=link.peer, peer_interface=link.peer_interface)
+        for link in links
+    }

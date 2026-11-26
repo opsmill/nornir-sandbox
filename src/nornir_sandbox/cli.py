@@ -15,6 +15,8 @@ from nornir.core.exceptions import TaskInterruptedError
 from nornir.core.task import AggregatedResult, PartialResult, Result
 
 from nornir_sandbox.core import init_nornir_sync
+from nornir_sandbox.eos import PLATFORM as EOS_PLATFORM
+from nornir_sandbox.operations import Interfaces
 
 
 def _known_hosts(type_: Any, value: list[str] | None) -> None:
@@ -33,6 +35,22 @@ Hosts = Annotated[
         help="Host to work on; repeat the option for several hosts. Default: every host.",
         negative=(),
         validator=_known_hosts,
+    ),
+]
+
+
+def _eos_hosts(type_: Any, value: list[str] | None) -> None:
+    """Reject host names that are not cEOS hosts, for the scripts that send EOS commands."""
+    if value:
+        init_nornir_sync(hosts=value, platform=EOS_PLATFORM)
+
+
+EosHosts = Annotated[
+    list[str] | None,
+    Parameter(
+        help="cEOS host to work on; repeat the option for several hosts. Default: every cEOS host.",
+        negative=(),
+        validator=_eos_hosts,
     ),
 ]
 Verbose = Annotated[bool, Parameter(help="Print the traceback of failed tasks.", negative=())]
@@ -60,6 +78,26 @@ SyncRunner = Annotated[
     Literal["threaded", "serial"],
     Parameter(help="Nornir runner: threaded runs the hosts in threads, serial one after the other on this thread."),
 ]
+
+
+# Options of scripts/operations/get_interfaces_*.py.
+OperationParams = Annotated[
+    str,
+    Parameter(help='Input of the Operation as JSON, for example \'{"oper_state": "up"}\'.'),
+]
+AsJson = Annotated[
+    bool,
+    Parameter(name="--json", help="Print each result as JSON, with model_dump_json().", negative=()),
+]
+
+
+def format_interfaces(host: str, result: Interfaces) -> str:
+    """Return one line per interface of a get_interfaces result."""
+    lines = []
+    for i in result.interfaces:
+        mtu = "-" if i.mtu is None else str(i.mtu)
+        lines.append(f"{host:<8} {i.name:<15} {i.admin_state + '/' + i.oper_state:<9} {mtu:>6}  {i.description}")
+    return "\n".join(lines) or f"{host:<8} (no interface)"
 
 
 def describe_result(result: Result) -> str:

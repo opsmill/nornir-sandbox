@@ -10,6 +10,7 @@ ceos1:
     links:
       - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet1}
       - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet2}
+      - {interface: Ethernet3, peer: srl1, peer_interface: ethernet-1/1}
 
 ceos2:
   hostname: 172.24.100.12
@@ -18,6 +19,7 @@ ceos2:
     links:
       - {interface: Ethernet1, peer: ceos1, peer_interface: Ethernet1}
       - {interface: Ethernet2, peer: ceos3, peer_interface: Ethernet1}
+      - {interface: Ethernet3, peer: srl1, peer_interface: ethernet-1/2}
 
 ceos3:
   hostname: 172.24.100.13
@@ -26,3 +28,11 @@ ceos3:
     links:
       - {interface: Ethernet1, peer: ceos2, peer_interface: Ethernet2}
       - {interface: Ethernet2, peer: ceos1, peer_interface: Ethernet2}
+
+srl1:
+  hostname: 172.24.100.21
+  groups: [srlinux]
+  data:
+    links:
+      - {interface: ethernet-1/1, peer: ceos1, peer_interface: Ethernet3}
+      - {interface: ethernet-1/2, peer: ceos2, peer_interface: Ethernet3}

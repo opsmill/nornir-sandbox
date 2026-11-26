@@ -20,8 +20,11 @@ from nornir_sandbox.paths import REPO_ROOT
 TOPOLOGY_FILE = REPO_ROOT / "lab" / "sandbox.clab.yml"
 
 
-def _eos_name(clab_interface: str) -> str:
-    return re.sub(r"^eth(\d+)$", r"Ethernet\1", clab_interface)
+def _interface_name(clab_interface: str) -> str:
+    """Containerlab names cEOS interfaces eth1 and SR Linux interfaces e1-1; the devices
+    name them Ethernet1 and ethernet-1/1."""
+    name = re.sub(r"^eth(\d+)$", r"Ethernet\1", clab_interface)
+    return re.sub(r"^e(\d+)-(\d+)$", r"ethernet-\1/\2", name)
 
 
 def test_hosts_and_addresses_match_the_lab() -> None:
@@ -38,8 +41,8 @@ def test_links_match_the_lab_cabling() -> None:
     cabled = set()
     for link in links:
         (a, a_intf), (b, b_intf) = (endpoint.split(":") for endpoint in link["endpoints"])
-        cabled.add((a, _eos_name(a_intf), b, _eos_name(b_intf)))
-        cabled.add((b, _eos_name(b_intf), a, _eos_name(a_intf)))
+        cabled.add((a, _interface_name(a_intf), b, _interface_name(b_intf)))
+        cabled.add((b, _interface_name(b_intf), a, _interface_name(a_intf)))
 
     declared = {
         (name, link["interface"], link["peer"], link["peer_interface"])
@@ -77,3 +80,13 @@ def test_sync_init_selects_the_runner_and_its_deadlines(runner: RunnerName, expe
     nr = init_nornir_sync(runner=runner, per_host_timeout=4, timeout=9)
     assert type(nr.runner).__name__ == expected
     assert getattr(nr.runner, "run_options", None) == RunOptions(per_host_timeout=4, timeout=9)
+
+
+def test_platform_filter_keeps_the_hosts_of_one_platform() -> None:
+    assert set(init_nornir_sync(platform="arista_eos").inventory.hosts) == {"ceos1", "ceos2", "ceos3"}
+    assert set(asyncio.run(init_nornir(platform="nokia_srlinux")).inventory.hosts) == {"srl1"}
+
+
+def test_platform_filter_rejects_hosts_of_another_platform() -> None:
+    with pytest.raises(ValueError, match="srl1 are not arista_eos hosts"):
+        init_nornir_sync(hosts=["ceos1", "srl1"], platform="arista_eos")

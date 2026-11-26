@@ -8,3 +8,18 @@ ceos:
         auth_strict_key: false
         # Enable password; setting it stops scrapli from warning on every connection.
         auth_secondary: admin
+
+srlinux:
+  platform: nokia_srlinux
+  # Default password of the SR Linux container image.
+  password: NokiaSrl1!
+  connection_options:
+    scrapli:
+      extras:
+        auth_strict_key: false
+        # Give the asyncio connection a terminal size. Without one, the SR Linux CLI
+        # asks the terminal for the cursor position and waits for an answer that
+        # scrapli never sends, so the asyncio connection times out getting the prompt.
+        transport_options:
+          asyncssh:
+            term_size: [511, 24]

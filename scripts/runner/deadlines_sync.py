@@ -31,8 +31,8 @@ from nornir.core.task import PartialResult, Result, Task
 
 from nornir_sandbox import init_nornir_sync
 from nornir_sandbox.checks import summarize_fact
-from nornir_sandbox.cli import Hosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
-from nornir_sandbox.eos import send_json_sync, send_sync, sleep_command
+from nornir_sandbox.cli import EosHosts, SlowHosts, SyncRunner, Verbose, format_event, print_summary
+from nornir_sandbox.eos import PLATFORM, send_json_sync, send_sync, sleep_command
 
 app = App()
 
@@ -77,7 +77,7 @@ def collect_facts(
 @app.default
 def main(
     *,
-    hosts: Hosts = None,
+    hosts: EosHosts = None,
     runner: SyncRunner = "threaded",
     workers: int = 10,
     delay: float = 0.5,
@@ -114,6 +114,7 @@ def main(
     run_options = None if on_runner else RunOptions(per_host_timeout=per_host_timeout, timeout=run_timeout)
     with init_nornir_sync(
         hosts=hosts,
+        platform=PLATFORM,
         runner=runner,
         num_workers=workers,
         per_host_timeout=per_host_timeout if on_runner else None,
