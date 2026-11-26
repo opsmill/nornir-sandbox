@@ -26,6 +26,13 @@ devices. Shared code lives in the `nornir_sandbox` Python package in `src/`.
 Login, SSH on the management address: `admin` / `admin` on the cEOS devices,
 `admin` / `NokiaSrl1!` (the image default) on srl1.
 
+## Support or help
+
+If you want to discuss the implementation of the new Nornir features, have feedback or questions on this repository, or just want to have a chit-chat; you can reach us on:
+
+- Discord: https://discord.gg/opsmill (#nornir)
+- Network to Code' Slack: https://networktocode.slack.com (#nornir)
+
 ## Requirements
 
 - Docker, and containerlab. Your user must be in the `clab_admins` group, or
@@ -33,10 +40,7 @@ Login, SSH on the management address: `admin` / `admin` on the cEOS devices,
 - The Arista cEOS image. Arista requires registration before you get access to the cEOS image. Once you have access to the image, specify the name of the image in the `./lab/sandbox.clab.yml` containerlab topology file.
 - The SR Linux image `ghcr.io/nokia/srlinux:24.10.1`, public on GitHub
   Container Registry (`topology.kinds.nokia_srlinux.image`).
-- [uv](https://docs.astral.sh/uv/). `uv sync` installs Nornir from a Git commit,
-  so it needs access to github.com, and a pre-release of nornir-scrapli from PyPI
-  (see
-  [Nornir from Git and the nornir-scrapli pre-release](#nornir-from-git-and-the-nornir-scrapli-pre-release)).
+- [uv](https://docs.astral.sh/uv/)
 - About 5 GB of free memory for the four devices.
 
 ## Start and stop the lab
@@ -393,19 +397,12 @@ threads. Up to 10 hosts run a task at the same time (`num_workers` of
   the cEOS hosts, and raises `ValueError` when `hosts` names a host of another
   platform.
 
-### Nornir from Git and the nornir-scrapli pre-release
+### Nornir 3.7.0 beta 1 and the nornir-scrapli pre-release
 
-The asyncio runner, `AInitNornir`, and the streaming, cancellation and time
-limits of the runners are in Nornir 3.7.0a1. The Nornir guide
-[Testing the 3.7 pre-releases](https://github.com/nornir-automation/nornir/blob/v3.7.0a1/docs/upgrading/testing_3_7_prereleases.rst)
+The asyncio runner, `AInitNornir`, and the streaming, cancellation, time
+limits of the runners and operations are in Nornir 3.7.0b1. The Nornir guide
+[Testing the 3.7 pre-releases](https://github.com/nornir-automation/nornir/blob/v3.7.0b1/docs/upgrading/testing_3_7_prereleases.rst)
 lists what changed.
-
-Operations
-([nornir-automation/nornir#1115](https://github.com/nornir-automation/nornir/pull/1115))
-are not released. `pyproject.toml` installs Nornir from a commit of the branch
-[`dga/feat-operation-s0e5v`](https://github.com/nornir-automation/nornir/tree/dga/feat-operation-s0e5v)
-under `[tool.uv.sources]`. That branch holds the code of Nornir 3.7.0a1 plus
-Operations, but its version is still 3.6.1.
 
 The asyncio scrapli connection and tasks are in nornir-scrapli 1.6.0a1, a
 pre-release on PyPI that requires Nornir 3.7.0a1 or later. `pyproject.toml` pins
