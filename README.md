@@ -117,7 +117,7 @@ Nornir also writes a log to `nornir.log`.
 ## Streaming, cancellation and deadlines
 
 The scripts in `scripts/runner/` run against the cEOS devices with the runner
-features of Nornir 3.7.0a1:
+features of Nornir 3.7.0b1:
 progress reported while a task runs, runs started in the background, cancellation,
 and deadlines. Each feature has a synchronous script (`*_sync.py`, threaded or
 serial runner, `def` tasks) and an asynchronous one (`*_async.py`, asyncio
@@ -203,9 +203,8 @@ typed input and a typed output, and no device commands. A task for each platform
 implements it. `nr.run_operation(GetFacts)` runs, on each host, the task
 registered for the host's platform, and each result holds an instance of the
 output model, which mypy knows. The calling code has no condition on
-`host.platform`. Operations come from
-[nornir-automation/nornir#1115](https://github.com/nornir-automation/nornir/pull/1115)
-(branch [`dga/feat-operation-s0e5v`](https://github.com/nornir-automation/nornir/tree/dga/feat-operation-s0e5v)).
+`host.platform`. Operations are in Nornir 3.7.0b1
+([nornir-automation/nornir#1115](https://github.com/nornir-automation/nornir/pull/1115)).
 
 The sandbox defines five Operations in `src/nornir_sandbox/operations/contracts.py`:
 
@@ -404,13 +403,12 @@ limits of the runners and operations are in Nornir 3.7.0b1. The Nornir guide
 [Testing the 3.7 pre-releases](https://github.com/nornir-automation/nornir/blob/v3.7.0b1/docs/upgrading/testing_3_7_prereleases.rst)
 lists what changed.
 
-The asyncio scrapli connection and tasks are in nornir-scrapli 1.6.0a1, a
-pre-release on PyPI that requires Nornir 3.7.0a1 or later. `pyproject.toml` pins
-the exact version, because uv and pip install a pre-release only when the
-version is given. Because the Nornir commit reports 3.6.1,
-`override-dependencies` under `[tool.uv]` replaces nornir-scrapli's Nornir
-requirement with the same commit. When you move to another Nornir commit,
-change the Nornir revision in both places and run `uv lock`.
+The asyncio scrapli connection and tasks are in nornir-scrapli 1.6.0a1, which
+requires Nornir 3.7.0a1 or later. Both are pre-releases on PyPI, and their APIs
+can still change. `pyproject.toml` pins the exact versions, because uv and pip
+install a pre-release only when the version is given. To move to a newer
+pre-release, change its version in `pyproject.toml`, check that nornir-scrapli
+still accepts the Nornir version, and run `uv lock`.
 
 ## Add your own code
 
