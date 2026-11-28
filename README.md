@@ -217,6 +217,16 @@ uv run invoke ray-down
 Each final line ends with the node that ran the host, for example
 `[node ray-site-a]`.
 
+To learn how the runner places and keeps the actors without the lab, run the demo in
+`scripts/ray_demo/` (see its README.md). It starts a Ray cluster with one worker per
+site as processes on this machine, and uses simulated devices:
+
+```bash
+uv run python scripts/ray_demo/demo_actors.py    # one actor per host, kept between runs
+uv run python scripts/ray_demo/demo_pinning.py   # placement by site, and a site worker that joins late
+uv run python scripts/ray_demo/demo_rebalance.py # balanced placement as nodes join and leave
+```
+
 ## Repository layout
 
 ```text

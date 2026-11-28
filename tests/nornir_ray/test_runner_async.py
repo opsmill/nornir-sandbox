@@ -17,6 +17,7 @@ from nornir.plugins.runners import AsyncioRunner
 from ray import cloudpickle
 
 from nornir_ray import RayRunner
+from nornir_ray.placement import BalancePolicy
 from nornir_sandbox import init_nornir
 
 cloudpickle.register_pickle_by_value(sys.modules[__name__])
@@ -219,3 +220,14 @@ def test_connection_stays_in_the_mode_that_opened_it(ray_local: None, tmp_path: 
 
     actor = asyncio.run(main())
     assert ray.get(actor.open_connections.remote()) == {"fake": "asyncio"}
+
+
+def test_balanced_async_run_places_every_host_on_a_live_node(ray_local: None, tmp_path: Path) -> None:
+    async def main() -> None:
+        nr, runner = await _nornir(tmp_path, balance=BalancePolicy())
+        result = await nr.arun(task=host_name)
+        assert not result.failed
+        assert runner.last_plan is not None
+        assert set(runner.last_plan.assignment) == set(SITES)
+
+    asyncio.run(main())

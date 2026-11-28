@@ -14,6 +14,8 @@ them, and the shared `nornir_sandbox` package. See README.md for details.
 - `scripts/<type>/`: cyclopts command-line scripts grouped by type (backup,
   execute, troubleshoot, validate, runner). `scripts/runner/` holds sync and
   async examples of run streaming, cancellation and deadlines.
+  `scripts/ray_demo/` runs the Ray runner on simulated devices and a Ray
+  cluster on this machine, without the lab (see its README.md).
 - `src/nornir_ray/`: prototype of the Ray runner (plugin `ray`), to move to
   its own package once validated. Design: `docs/superpowers/specs/`.
 - `src/nornir_sandbox/`: shared code: `init_nornir()`, `init_nornir_sync()`,

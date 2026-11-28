@@ -1,0 +1,28 @@
+---
+# Simulated devices for the Ray runner demo. No device answers on these addresses
+# (192.0.2.0/24 is reserved for documentation); the "simulated" connection plugin in
+# simlab.py stands in for them.
+#
+# data.site places a host's actor on the Ray worker of that site. rtr-x1 has no site, so
+# its actor can run on any node. demo_pinning.py starts the site_c worker late, to show
+# rtr-c1 waiting for it.
+rtr-a1:
+  hostname: 192.0.2.11
+  data: {site: site_a}
+rtr-a2:
+  hostname: 192.0.2.12
+  data: {site: site_a}
+rtr-a3:
+  hostname: 192.0.2.13
+  data: {site: site_a}
+rtr-b1:
+  hostname: 192.0.2.21
+  data: {site: site_b}
+rtr-b2:
+  hostname: 192.0.2.22
+  data: {site: site_b}
+rtr-c1:
+  hostname: 192.0.2.31
+  data: {site: site_c}
+rtr-x1:
+  hostname: 192.0.2.99

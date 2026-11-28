@@ -14,9 +14,11 @@ from nornir_ray.errors import (
     RemoteTaskError,
     TaskNotSerializableError,
 )
+from nornir_ray.placement import BalancePolicy
 from nornir_ray.runner import RayRunner
 
 __all__ = [
+    "BalancePolicy",
     "HostActorDiedError",
     "RayClusterUnreachableError",
     "RayRunner",

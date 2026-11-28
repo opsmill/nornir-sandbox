@@ -20,6 +20,7 @@ from ray import cloudpickle
 
 from nornir_ray import HostActorDiedError, RayClusterUnreachableError, RayRunner, TaskNotSerializableError
 from nornir_ray.cluster import check_reachable
+from nornir_ray.placement import BalancePolicy, Move, Plan
 from nornir_sandbox import init_nornir_sync
 
 cloudpickle.register_pickle_by_value(sys.modules[__name__])
@@ -254,3 +255,43 @@ def test_context_exit_closes_worker_connections(ray_local: None, tmp_path: Path)
         actor = runner.pool.get(nr.inventory.hosts["h1"], "site_a")
         assert ray.get(actor.open_connections.remote()) == {"fake": "sync"}
     assert ray.get(actor.open_connections.remote()) == {}
+
+
+def test_balanced_run_places_every_host_on_a_live_node(ray_local: None, tmp_path: Path) -> None:
+    nr, runner = _nornir(tmp_path, balance=BalancePolicy())
+    result = nr.run(task=host_name)
+    assert not result.failed
+    assert runner.last_plan is not None
+    assert set(runner.last_plan.assignment) == set(SITES)
+    assert set(runner.last_plan.assignment.values()) == {ray.get_runtime_context().get_node_id()}
+    assert {move.reason for move in runner.last_plan.moves} == {"new"}
+
+
+def test_balanced_second_run_moves_nothing_and_keeps_the_actors(ray_local: None, tmp_path: Path) -> None:
+    nr, runner = _nornir(tmp_path, balance=BalancePolicy())
+    nr.run(task=host_name)
+    actors = {name: runner.pool.actor_id(name) for name in SITES}
+    nr.run(task=host_name)
+    assert runner.last_plan is not None
+    assert runner.last_plan.moves == []
+    assert {name: runner.pool.actor_id(name) for name in SITES} == actors
+
+
+def test_balanced_move_replaces_only_the_actor_of_the_moved_host(
+    ray_local: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    nr, runner = _nornir(tmp_path, balance=BalancePolicy())
+    assert nr.run(task=count_calls)["h1"][0].result == 1
+    actors = {name: runner.pool.actor_id(name) for name in SITES}
+    node = ray.get_runtime_context().get_node_id()
+
+    def move_h1(*args: Any) -> Plan:
+        return Plan(dict.fromkeys(SITES, node), [Move("h1", node, node, "rebalance")])
+
+    monkeypatch.setattr("nornir_ray.runner.plan", move_h1)
+    result = nr.run(task=count_calls)
+
+    assert result["h1"][0].result == 1
+    assert result["h2"][0].result == 2
+    assert runner.pool.actor_id("h1") != actors["h1"]
+    assert runner.pool.actor_id("h2") == actors["h2"]

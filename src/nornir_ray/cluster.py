@@ -9,6 +9,7 @@ from typing import Any
 
 import ray
 from nornir.core.inventory import Host
+from ray.util.scheduling_strategies import NodeAffinitySchedulingStrategy
 
 from nornir_ray.errors import RayClusterUnreachableError
 from nornir_ray.wire import detach_host
@@ -70,17 +71,30 @@ class ActorPool:
 
     def __init__(self) -> None:
         self._actors: dict[str, Any] = {}
+        # Node ID of each actor created on a chosen node.
+        self._nodes: dict[str, str] = {}
         self._lock = threading.Lock()
 
-    def get(self, host: Host, site: str | None) -> Any:
-        """Return the actor of `host`, creating it on a node of `site` if it does not exist."""
+    def get(self, host: Host, site: str | None, node_id: str | None = None) -> Any:
+        """Return the actor of `host`, creating it on a node of `site` if it does not exist.
+
+        With `node_id`, a new actor runs only on that node, and stops if the node leaves.
+        """
         with self._lock:
             actor = self._actors.get(host.name)
             if actor is None:
-                resources = {site: SITE_SHARE} if site else {}
-                actor = HostActor.options(resources=resources).remote(detach_host(host), site)
+                options: dict[str, Any] = {"resources": {site: SITE_SHARE} if site else {}}
+                if node_id is not None:
+                    options["scheduling_strategy"] = NodeAffinitySchedulingStrategy(node_id, soft=False)
+                    self._nodes[host.name] = node_id
+                actor = HostActor.options(**options).remote(detach_host(host), site)
                 self._actors[host.name] = actor
             return actor
+
+    def nodes(self) -> dict[str, str]:
+        """Return the node ID of each host whose actor was created on a chosen node."""
+        with self._lock:
+            return dict(self._nodes)
 
     def cancel(self, host_name: str) -> None:
         """Ask the actor of `host_name` to cancel its current call, if it has one."""
@@ -94,6 +108,7 @@ class ActorPool:
         with self._lock:
             if self._actors.get(host_name) is actor:
                 del self._actors[host_name]
+                self._nodes.pop(host_name, None)
 
     def kill(self, host_name: str, actor: Any = None) -> None:
         """Stop the actor of `host_name` and its connections; the next `get` creates a new one.
@@ -106,6 +121,7 @@ class ActorPool:
             if current is None or (actor is not None and current is not actor):
                 return
             del self._actors[host_name]
+            self._nodes.pop(host_name, None)
         ray.kill(current, no_restart=True)
 
     def actor_id(self, host_name: str) -> str | None:
